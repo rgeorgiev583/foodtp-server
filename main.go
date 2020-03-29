@@ -142,10 +142,26 @@ func importRecipesFromCSV(reader io.Reader, recipes RecipeMap) {
 	return
 }
 
+func scaleRecipesByNumberOfServings(recipes RecipeMap, numberOfServings int) {
+	for _, recipe := range recipes {
+		for _, ingredient := range recipe {
+			ingredient.Quantity *= 2
+		}
+	}
+}
+
 func main() {
 	if len(os.Args) < 4 {
 		fmt.Fprintln(os.Stderr, "not enough arguments")
 		os.Exit(1)
+	}
+
+	numberOfServings, err := strconv.Atoi(os.Args[3])
+	if err != nil {
+		log.Fatal(err)
+	}
+	if numberOfServings <= 0 {
+		fmt.Fprintln(os.Stderr, "number of servings cannot be negative or zero")
 	}
 
 	unitConversionTable := ConversionTable{}
@@ -163,7 +179,7 @@ func main() {
 	convertIngredientUnits(unitConversionTable, availableIngredients)
 
 	recipes := RecipeMap{}
-	for _, filename := range os.Args[3:] {
+	for _, filename := range os.Args[4:] {
 		file, err := os.Open(filename)
 		if err != nil {
 			log.Fatal(err)
@@ -171,6 +187,10 @@ func main() {
 		defer file.Close()
 
 		importRecipesFromCSV(file, recipes)
+	}
+
+	if numberOfServings > 1 {
+		scaleRecipesByNumberOfServings(recipes, numberOfServings)
 	}
 
 	recipeNameSet := set.NewSet()
