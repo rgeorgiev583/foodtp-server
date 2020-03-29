@@ -145,6 +145,11 @@ func main() {
 						return
 					}
 
+					if remainingIngredient.MeasurementUnit != ingredient.MeasurementUnit {
+						log.Printf(`measurement units "%s" and "%s" are incomparable`, remainingIngredient.MeasurementUnit, ingredient.MeasurementUnit)
+						continue
+					}
+
 					remainingIngredient.Quantity -= ingredient.Quantity
 					if remainingIngredient.MeasurementUnit != "на вкус" && remainingIngredient.Quantity < 0 {
 						return
