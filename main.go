@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -142,6 +143,25 @@ func importRecipesFromCSV(reader io.Reader, recipes RecipeMap) {
 	return
 }
 
+func uniq(slice []string) (uniqSlice []string) {
+	uniqSlice = make([]string, 0, cap(slice))
+	if len(slice) == 0 {
+		return
+	}
+
+	uniqSlice = append(uniqSlice, slice[0])
+	previousElement := slice[0]
+	for _, element := range slice {
+		if previousElement == element {
+			continue
+		}
+
+		uniqSlice = append(uniqSlice, element)
+		previousElement = element
+	}
+	return
+}
+
 func getSupportedIngredients(recipes RecipeMap) (ingredients []string) {
 	ingredients = []string{}
 	for _, recipe := range recipes {
@@ -149,6 +169,8 @@ func getSupportedIngredients(recipes RecipeMap) (ingredients []string) {
 			ingredients = append(ingredients, ingredient.Name)
 		}
 	}
+	sort.Strings(ingredients)
+	ingredients = uniq(ingredients)
 	return
 }
 
