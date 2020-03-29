@@ -10,8 +10,18 @@ import (
 	"strconv"
 	"strings"
 
+	"gopkg.in/ini.v1"
+
 	set "github.com/deckarep/golang-set"
 )
+
+type Measurement struct {
+	Quantity float64
+	Unit     string
+}
+
+type CulinaryUnitDefinition map[string]*Measurement
+type ConversionTable map[string]CulinaryUnitDefinition
 
 type Ingredient struct {
 	Name            string
@@ -21,6 +31,29 @@ type Ingredient struct {
 
 type IngredientMap map[string]*Ingredient
 type RecipeMap map[string]IngredientMap
+
+func loadConversionTable(filename string, conversionTable ConversionTable) {
+	file, err := ini.Load(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, section := range file.Sections() {
+		unitDefinition := CulinaryUnitDefinition{}
+
+		for _, key := range section.Keys() {
+			measurement := &Measurement{}
+			_, err = fmt.Sscanln(key.Value(), &measurement.Quantity, &measurement.Unit)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			unitDefinition[key.Name()] = measurement
+		}
+
+		conversionTable[section.Name()] = unitDefinition
+	}
+}
 
 func importIngredientsFromCSV(reader io.Reader, ingredients IngredientMap) {
 	bufferedReader := bufio.NewReader(reader)
@@ -96,12 +129,15 @@ func importRecipesFromCSV(reader io.Reader, recipes RecipeMap) {
 }
 
 func main() {
-	if len(os.Args) < 3 {
+	if len(os.Args) < 4 {
 		fmt.Fprintln(os.Stderr, "not enough arguments")
 		os.Exit(1)
 	}
 
-	ingredientFile, err := os.Open(os.Args[1])
+	unitConversionTable := ConversionTable{}
+	loadConversionTable(os.Args[1], unitConversionTable)
+
+	ingredientFile, err := os.Open(os.Args[2])
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -111,7 +147,7 @@ func main() {
 	importIngredientsFromCSV(ingredientFile, availableIngredients)
 
 	recipes := RecipeMap{}
-	for _, filename := range os.Args[2:] {
+	for _, filename := range os.Args[3:] {
 		file, err := os.Open(filename)
 		if err != nil {
 			log.Fatal(err)
@@ -145,12 +181,21 @@ func main() {
 						return
 					}
 
-					if remainingIngredient.MeasurementUnit != ingredient.MeasurementUnit {
-						log.Printf(`measurement units "%s" and "%s" are incomparable`, remainingIngredient.MeasurementUnit, ingredient.MeasurementUnit)
-						continue
+					ingredientUnitDefinition, ok := unitConversionTable[ingredient.MeasurementUnit]
+					var ingredientUnitMeasurement *Measurement
+					if ok {
+						ingredientUnitMeasurement, ok = ingredientUnitDefinition[ingredient.Name]
 					}
 
-					remainingIngredient.Quantity -= ingredient.Quantity
+					if ingredientUnitMeasurement != nil && remainingIngredient.MeasurementUnit == ingredientUnitMeasurement.Unit {
+						remainingIngredient.Quantity -= ingredient.Quantity * ingredientUnitMeasurement.Quantity
+					} else if remainingIngredient.MeasurementUnit != ingredient.MeasurementUnit {
+						log.Printf(`measurement units "%s" (from product list) and "%s" (from recipe) are incomparable`, remainingIngredient.MeasurementUnit, ingredient.MeasurementUnit)
+						continue
+					} else {
+						remainingIngredient.Quantity -= ingredient.Quantity
+					}
+
 					if remainingIngredient.MeasurementUnit != "на вкус" && remainingIngredient.Quantity < 0 {
 						return
 					}
