@@ -127,6 +127,7 @@ func main() {
 	}
 
 	recipeNamePowerSet := recipeNameSet.PowerSet()
+	recipeNameMatchingSets := []set.Set{}
 	for recipeNameSubsetInterface := range recipeNamePowerSet.Iter() {
 		func() {
 			remainingIngredients := IngredientMap{}
@@ -135,10 +136,8 @@ func main() {
 				remainingIngredients[ingredientName] = &ingredientCopy
 			}
 			recipeNameSubset := recipeNameSubsetInterface.(set.Set)
-			recipeNameSubsetSlice := []string{}
 			for recipeNameInterface := range recipeNameSubset.Iter() {
 				recipeName := recipeNameInterface.(string)
-				recipeNameSubsetSlice = append(recipeNameSubsetSlice, recipeName)
 				recipe, _ := recipes[recipeName]
 				for _, ingredient := range recipe {
 					remainingIngredient, ok := remainingIngredients[ingredient.Name]
@@ -153,9 +152,32 @@ func main() {
 				}
 			}
 
-			if len(recipeNameSubsetSlice) > 0 {
-				fmt.Println(strings.Join(recipeNameSubsetSlice, ", "))
+			if recipeNameSubset.Cardinality() > 0 {
+				recipeNameMatchingSets = append(recipeNameMatchingSets, recipeNameSubset)
 			}
 		}()
+	}
+
+	recipeNameMatchingSetsNoSubsets := []set.Set{}
+	for _, recipeNameLHSSubset := range recipeNameMatchingSets {
+		isSubset := false
+		for _, recipeNameRHSSubset := range recipeNameMatchingSets {
+			if recipeNameLHSSubset != recipeNameRHSSubset && recipeNameLHSSubset.IsSubset(recipeNameRHSSubset) {
+				isSubset = true
+				break
+			}
+		}
+		if !isSubset {
+			recipeNameMatchingSetsNoSubsets = append(recipeNameMatchingSetsNoSubsets, recipeNameLHSSubset)
+		}
+	}
+
+	for _, recipeNameSubset := range recipeNameMatchingSetsNoSubsets {
+		recipeNameSubsetSlice := []string{}
+		for recipeNameInterface := range recipeNameSubset.Iter() {
+			recipeName := recipeNameInterface.(string)
+			recipeNameSubsetSlice = append(recipeNameSubsetSlice, recipeName)
+		}
+		fmt.Println(strings.Join(recipeNameSubsetSlice, ", "))
 	}
 }
