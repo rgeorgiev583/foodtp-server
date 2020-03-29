@@ -3,9 +3,12 @@ package main
 import (
 	"bufio"
 	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -25,12 +28,17 @@ type ConversionTable map[string]CulinaryUnitDefinition
 
 type Ingredient struct {
 	Name            string
-	Quantity        float64
-	MeasurementUnit string
+	Quantity        float64 `json:"quantity"`
+	MeasurementUnit string  `json:"unit"`
 }
 
 type IngredientMap map[string]*Ingredient
 type RecipeMap map[string]IngredientMap
+
+type RecipeSuggestionRequest struct {
+	NumberOfServings     int           `json:"numberOfServings"`
+	AvailableIngredients IngredientMap `json:"products"`
+}
 
 func loadConversionTable(filename string, conversionTable ConversionTable) {
 	file, err := ini.Load(filename)
@@ -53,40 +61,6 @@ func loadConversionTable(filename string, conversionTable ConversionTable) {
 
 		conversionTable[section.Name()] = unitDefinition
 	}
-}
-
-func importIngredientsFromCSV(reader io.Reader, ingredients IngredientMap) {
-	bufferedReader := bufio.NewReader(reader)
-	_, _, err := bufferedReader.ReadLine()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	csvReader := csv.NewReader(bufferedReader)
-	ingredientRecords, err := csvReader.ReadAll()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	for _, ingredientRecord := range ingredientRecords {
-		ingredientQuantityStr := ingredientRecord[1]
-		var ingredientQuantity float64
-		if ingredientQuantityStr != "-" {
-			ingredientQuantity, err = strconv.ParseFloat(ingredientQuantityStr, 64)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}
-
-		ingredientName := ingredientRecord[0]
-		ingredients[ingredientName] = &Ingredient{
-			Name:            ingredientName,
-			Quantity:        ingredientQuantity,
-			MeasurementUnit: ingredientRecord[2],
-		}
-	}
-
-	return
 }
 
 func convertIngredientUnits(unitConversionTable ConversionTable, ingredients IngredientMap) {
@@ -230,35 +204,16 @@ func getPossibleRecipeSets(unitConversionTable ConversionTable, availableIngredi
 }
 
 func main() {
-	if len(os.Args) < 4 {
+	if len(os.Args) < 2 {
 		fmt.Fprintln(os.Stderr, "not enough arguments")
 		os.Exit(1)
-	}
-
-	numberOfServings, err := strconv.Atoi(os.Args[3])
-	if err != nil {
-		log.Fatal(err)
-	}
-	if numberOfServings <= 0 {
-		fmt.Fprintln(os.Stderr, "number of servings cannot be negative or zero")
 	}
 
 	unitConversionTable := ConversionTable{}
 	loadConversionTable(os.Args[1], unitConversionTable)
 
-	ingredientFile, err := os.Open(os.Args[2])
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer ingredientFile.Close()
-
-	availableIngredients := IngredientMap{}
-	importIngredientsFromCSV(ingredientFile, availableIngredients)
-
-	convertIngredientUnits(unitConversionTable, availableIngredients)
-
 	recipes := RecipeMap{}
-	for _, filename := range os.Args[4:] {
+	for _, filename := range os.Args[2:] {
 		file, err := os.Open(filename)
 		if err != nil {
 			log.Fatal(err)
@@ -268,12 +223,42 @@ func main() {
 		importRecipesFromCSV(file, recipes)
 	}
 
-	if numberOfServings > 1 {
-		scaleRecipesByNumberOfServings(recipes, numberOfServings)
-	}
+	http.HandleFunc("/recipes", func(w http.ResponseWriter, r *http.Request) {
+		requestData, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer r.Body.Close()
 
-	possibleRecipeSets := getPossibleRecipeSets(unitConversionTable, availableIngredients, recipes)
-	for _, recipeNameSubsetSlice := range possibleRecipeSets {
-		fmt.Println(strings.Join(recipeNameSubsetSlice, ", "))
-	}
+		var request *RecipeSuggestionRequest
+		err = json.Unmarshal(requestData, &request)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		for ingredientName, ingredient := range request.AvailableIngredients {
+			ingredient.Name = ingredientName
+		}
+
+		convertIngredientUnits(unitConversionTable, request.AvailableIngredients)
+
+		if request.NumberOfServings > 1 {
+			scaleRecipesByNumberOfServings(recipes, request.NumberOfServings)
+		}
+
+		possibleRecipeSets := getPossibleRecipeSets(unitConversionTable, request.AvailableIngredients, recipes)
+		for _, recipeNameSubsetSlice := range possibleRecipeSets {
+			fmt.Println(strings.Join(recipeNameSubsetSlice, ", "))
+		}
+
+		possibleRecipeSetJSON, err := json.Marshal(possibleRecipeSets)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		w.Header().Add("Content-Type", "application/json")
+		w.Write(possibleRecipeSetJSON)
+	})
+
+	log.Fatal(http.ListenAndServe(":8080", nil))
 }
