@@ -34,10 +34,16 @@ type Ingredient struct {
 
 type IngredientMap map[string]*Ingredient
 type RecipeMap map[string]IngredientMap
+type RecipeSourceMap map[string]string
 
 type RecipeSuggestionRequest struct {
 	NumberOfServings     int           `json:"numberOfServings"`
 	AvailableIngredients IngredientMap `json:"products"`
+}
+
+type RecipeSuggestionResponse struct {
+	Name   string `json:"name"`
+	Source string `json:"source"`
 }
 
 func loadConversionTable(filename string, conversionTable ConversionTable) {
@@ -60,6 +66,26 @@ func loadConversionTable(filename string, conversionTable ConversionTable) {
 		}
 
 		conversionTable[section.Name()] = unitDefinition
+	}
+}
+
+func loadRecipeMetadata(reader io.Reader, recipeSources RecipeSourceMap) {
+	bufferedReader := bufio.NewReader(reader)
+	_, _, err := bufferedReader.ReadLine()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	csvReader := csv.NewReader(bufferedReader)
+	recipeRecords, err := csvReader.ReadAll()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, recipeRecord := range recipeRecords {
+		recipeName := recipeRecord[0]
+		recipeSource := recipeRecord[4]
+		recipeSources[recipeName] = recipeSource
 	}
 }
 
@@ -222,8 +248,17 @@ func main() {
 	unitConversionTable := ConversionTable{}
 	loadConversionTable(os.Args[1], unitConversionTable)
 
+	recipeMetadataFile, err := os.Open(os.Args[2])
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer recipeMetadataFile.Close()
+
+	recipeSources := RecipeSourceMap{}
+	loadRecipeMetadata(recipeMetadataFile, recipeSources)
+
 	recipes := RecipeMap{}
-	for _, filename := range os.Args[2:] {
+	for _, filename := range os.Args[3:] {
 		file, err := os.Open(filename)
 		if err != nil {
 			log.Fatal(err)
@@ -273,13 +308,31 @@ func main() {
 			fmt.Println(strings.Join(recipeNameSubsetSlice, ", "))
 		}
 
-		possibleRecipeSetJSON, err := json.Marshal(possibleRecipeSets)
+		possibleRecipeResponseSets := [][]*RecipeSuggestionResponse{}
+		for _, possibleRecipeSet := range possibleRecipeSets {
+			possibleRecipeResponseSet := []*RecipeSuggestionResponse{}
+			for _, possibleRecipe := range possibleRecipeSet {
+				recipeSource, ok := recipeSources[possibleRecipe]
+				if !ok {
+					log.Fatal("recipe not found")
+				}
+
+				possibleRecipeResponse := &RecipeSuggestionResponse{
+					Name:   possibleRecipe,
+					Source: recipeSource,
+				}
+				possibleRecipeResponseSet = append(possibleRecipeResponseSet, possibleRecipeResponse)
+			}
+			possibleRecipeResponseSets = append(possibleRecipeResponseSets, possibleRecipeResponseSet)
+		}
+
+		possibleRecipeResponseSetsJSON, err := json.Marshal(possibleRecipeResponseSets)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		w.Header().Add("Content-Type", "application/json")
-		w.Write(possibleRecipeSetJSON)
+		w.Write(possibleRecipeResponseSetsJSON)
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
