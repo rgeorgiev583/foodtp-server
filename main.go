@@ -258,12 +258,17 @@ func main() {
 		}
 	}
 
+	recipeNameMatchingSetSlicesNoSubsets := [][]string{}
 	for _, recipeNameSubset := range recipeNameMatchingSetsNoSubsets {
 		recipeNameSubsetSlice := []string{}
 		for recipeNameInterface := range recipeNameSubset.Iter() {
 			recipeName := recipeNameInterface.(string)
 			recipeNameSubsetSlice = append(recipeNameSubsetSlice, recipeName)
 		}
+		recipeNameMatchingSetSlicesNoSubsets = append(recipeNameMatchingSetSlicesNoSubsets, recipeNameSubsetSlice)
+	}
+
+	for _, recipeNameSubsetSlice := range recipeNameMatchingSetSlicesNoSubsets {
 		fmt.Println(strings.Join(recipeNameSubsetSlice, ", "))
 	}
 }
