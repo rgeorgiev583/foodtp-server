@@ -150,49 +150,7 @@ func scaleRecipesByNumberOfServings(recipes RecipeMap, numberOfServings int) {
 	}
 }
 
-func main() {
-	if len(os.Args) < 4 {
-		fmt.Fprintln(os.Stderr, "not enough arguments")
-		os.Exit(1)
-	}
-
-	numberOfServings, err := strconv.Atoi(os.Args[3])
-	if err != nil {
-		log.Fatal(err)
-	}
-	if numberOfServings <= 0 {
-		fmt.Fprintln(os.Stderr, "number of servings cannot be negative or zero")
-	}
-
-	unitConversionTable := ConversionTable{}
-	loadConversionTable(os.Args[1], unitConversionTable)
-
-	ingredientFile, err := os.Open(os.Args[2])
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer ingredientFile.Close()
-
-	availableIngredients := IngredientMap{}
-	importIngredientsFromCSV(ingredientFile, availableIngredients)
-
-	convertIngredientUnits(unitConversionTable, availableIngredients)
-
-	recipes := RecipeMap{}
-	for _, filename := range os.Args[4:] {
-		file, err := os.Open(filename)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer file.Close()
-
-		importRecipesFromCSV(file, recipes)
-	}
-
-	if numberOfServings > 1 {
-		scaleRecipesByNumberOfServings(recipes, numberOfServings)
-	}
-
+func getPossibleRecipeSets(unitConversionTable ConversionTable, availableIngredients IngredientMap, recipes RecipeMap) (recipeNameMatchingSetSlicesNoSubsets [][]string) {
 	recipeNameSet := set.NewSet()
 	for recipeName := range recipes {
 		recipeNameSet.Add(recipeName)
@@ -258,7 +216,7 @@ func main() {
 		}
 	}
 
-	recipeNameMatchingSetSlicesNoSubsets := [][]string{}
+	recipeNameMatchingSetSlicesNoSubsets = [][]string{}
 	for _, recipeNameSubset := range recipeNameMatchingSetsNoSubsets {
 		recipeNameSubsetSlice := []string{}
 		for recipeNameInterface := range recipeNameSubset.Iter() {
@@ -268,7 +226,54 @@ func main() {
 		recipeNameMatchingSetSlicesNoSubsets = append(recipeNameMatchingSetSlicesNoSubsets, recipeNameSubsetSlice)
 	}
 
-	for _, recipeNameSubsetSlice := range recipeNameMatchingSetSlicesNoSubsets {
+	return
+}
+
+func main() {
+	if len(os.Args) < 4 {
+		fmt.Fprintln(os.Stderr, "not enough arguments")
+		os.Exit(1)
+	}
+
+	numberOfServings, err := strconv.Atoi(os.Args[3])
+	if err != nil {
+		log.Fatal(err)
+	}
+	if numberOfServings <= 0 {
+		fmt.Fprintln(os.Stderr, "number of servings cannot be negative or zero")
+	}
+
+	unitConversionTable := ConversionTable{}
+	loadConversionTable(os.Args[1], unitConversionTable)
+
+	ingredientFile, err := os.Open(os.Args[2])
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer ingredientFile.Close()
+
+	availableIngredients := IngredientMap{}
+	importIngredientsFromCSV(ingredientFile, availableIngredients)
+
+	convertIngredientUnits(unitConversionTable, availableIngredients)
+
+	recipes := RecipeMap{}
+	for _, filename := range os.Args[4:] {
+		file, err := os.Open(filename)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer file.Close()
+
+		importRecipesFromCSV(file, recipes)
+	}
+
+	if numberOfServings > 1 {
+		scaleRecipesByNumberOfServings(recipes, numberOfServings)
+	}
+
+	possibleRecipeSets := getPossibleRecipeSets(unitConversionTable, availableIngredients, recipes)
+	for _, recipeNameSubsetSlice := range possibleRecipeSets {
 		fmt.Println(strings.Join(recipeNameSubsetSlice, ", "))
 	}
 }
