@@ -89,6 +89,20 @@ func importIngredientsFromCSV(reader io.Reader, ingredients IngredientMap) {
 	return
 }
 
+func convertIngredientUnits(unitConversionTable ConversionTable, ingredients IngredientMap) {
+	for _, ingredient := range ingredients {
+		ingredientUnitDefinition, ok := unitConversionTable[ingredient.MeasurementUnit]
+		var ingredientUnitMeasurement *Measurement
+		if ok {
+			ingredientUnitMeasurement, ok = ingredientUnitDefinition[ingredient.Name]
+		}
+		if ingredientUnitMeasurement != nil {
+			ingredient.MeasurementUnit = ingredientUnitMeasurement.Unit
+			ingredient.Quantity *= ingredientUnitMeasurement.Quantity
+		}
+	}
+}
+
 func importRecipesFromCSV(reader io.Reader, recipes RecipeMap) {
 	bufferedReader := bufio.NewReader(reader)
 	_, _, err := bufferedReader.ReadLine()
@@ -145,6 +159,8 @@ func main() {
 
 	availableIngredients := IngredientMap{}
 	importIngredientsFromCSV(ingredientFile, availableIngredients)
+
+	convertIngredientUnits(unitConversionTable, availableIngredients)
 
 	recipes := RecipeMap{}
 	for _, filename := range os.Args[3:] {
