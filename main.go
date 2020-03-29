@@ -116,6 +116,16 @@ func importRecipesFromCSV(reader io.Reader, recipes RecipeMap) {
 	return
 }
 
+func getSupportedIngredients(recipes RecipeMap) (ingredients []string) {
+	ingredients = []string{}
+	for _, recipe := range recipes {
+		for _, ingredient := range recipe {
+			ingredients = append(ingredients, ingredient.Name)
+		}
+	}
+	return
+}
+
 func scaleRecipesByNumberOfServings(recipes RecipeMap, numberOfServings int) {
 	for _, recipe := range recipes {
 		for _, ingredient := range recipe {
@@ -222,6 +232,18 @@ func main() {
 
 		importRecipesFromCSV(file, recipes)
 	}
+
+	http.HandleFunc("/ingredients", func(w http.ResponseWriter, r *http.Request) {
+		ingredients := getSupportedIngredients(recipes)
+
+		ingredientsJSON, err := json.Marshal(ingredients)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		w.Header().Add("Content-Type", "application/json")
+		w.Write(ingredientsJSON)
+	})
 
 	http.HandleFunc("/recipes", func(w http.ResponseWriter, r *http.Request) {
 		requestData, err := ioutil.ReadAll(r.Body)
