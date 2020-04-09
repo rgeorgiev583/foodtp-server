@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -48,7 +49,61 @@ type RecipeSuggestionResponse struct {
 	Source string `json:"source"`
 }
 
-func loadConversionTable(filename string, conversionTable ConversionTable) {
+func loadConversionTableCSV(filename string, conversionTable ConversionTable) {
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	csvReader := csv.NewReader(file)
+	ingredientRecords, err := csvReader.ReadAll()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	culinaryUnitDescriptions := ingredientRecords[0][1:]
+	culinaryUnitCount := len(culinaryUnitDescriptions)
+	culinaryUnits := make([]string, culinaryUnitCount, culinaryUnitCount)
+
+	culinaryUnitDescriptionPattern := regexp.MustCompile(`(.+?)\s*\(\d+\s*.+\)`)
+	for i, culinaryUnitDescription := range culinaryUnitDescriptions {
+		culinaryUnitDescriptionMatch := culinaryUnitDescriptionPattern.FindStringSubmatch(culinaryUnitDescription)
+		if len(culinaryUnitDescriptionMatch) < 2 {
+			log.Print("error: invalid format of culinary unit description")
+			return
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		culinaryUnits[i] = culinaryUnitDescriptionMatch[1]
+	}
+
+	for _, ingredientRecord := range ingredientRecords[1:] {
+		for i, measurementStr := range ingredientRecord[1:] {
+			if measurementStr == "-" {
+				continue
+			}
+
+			measurement := &Measurement{}
+			_, err = fmt.Sscanln(measurementStr, &measurement.Quantity, &measurement.Unit)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			unitDefinition, ok := conversionTable[culinaryUnits[i]]
+			if !ok {
+				unitDefinition = CulinaryUnitDefinition{}
+				conversionTable[culinaryUnits[i]] = unitDefinition
+			}
+
+			unitDefinition[ingredientRecord[0]] = measurement
+		}
+	}
+}
+
+func loadConversionTableINI(filename string, conversionTable ConversionTable) {
 	file, err := ini.Load(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -266,6 +321,9 @@ func main() {
 	var isDebugMode bool
 	flag.BoolVar(&isDebugMode, "debug", false, "enable debug mode")
 
+	var conversionTableINIFilename string
+	flag.StringVar(&conversionTableINIFilename, "conversionTableINI", "", "load a conversion table from an INI file with the given name")
+
 	flag.Parse()
 
 	args := flag.Args()
@@ -275,7 +333,10 @@ func main() {
 	}
 
 	unitConversionTable := ConversionTable{}
-	loadConversionTable(args[0], unitConversionTable)
+	loadConversionTableCSV(args[0], unitConversionTable)
+	if conversionTableINIFilename != "" {
+		loadConversionTableINI(conversionTableINIFilename, unitConversionTable)
+	}
 
 	recipeMetadataFile, err := os.Open(args[1])
 	if err != nil {

@@ -13,7 +13,9 @@
             "env": {},
             "args": [
                 "-debug",
+                "-conversionTableINI",
                 "data/unit-conversion-table.ini",
+                "data/unit-conversion-table.csv",
                 "data/recipe-metadata.csv",
                 "data/recipe-ingredients.csv"
             ]
