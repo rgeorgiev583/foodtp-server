@@ -26,13 +26,10 @@ type Measurement struct {
 	Unit     string
 }
 
-type CulinaryUnitDefinition map[string]*Measurement
-type ConversionTable map[string]CulinaryUnitDefinition
 type BaseConversionTable map[string]*Measurement
-type UnitAliasDefinition map[string]string
-type UnitAliasTable map[string]UnitAliasDefinition
-type BaseUnitAliasTable map[string]string
-type ProductAliasTable map[string]string
+type ConversionTable map[string]BaseConversionTable
+type AliasTable map[string]string
+type UnitAliasTable map[string]AliasTable
 
 type Ingredient struct {
 	Name            string
@@ -113,7 +110,7 @@ func loadConversionTableCSV(filename string, conversionTable ConversionTable, ba
 
 			unitDefinition, ok := conversionTable[culinaryUnits[i]]
 			if !ok {
-				unitDefinition = CulinaryUnitDefinition{}
+				unitDefinition = BaseConversionTable{}
 				conversionTable[culinaryUnits[i]] = unitDefinition
 			}
 
@@ -146,7 +143,7 @@ func loadConversionTableINI(filename string, conversionTable ConversionTable, ba
 	}
 
 	for _, section := range file.Sections() {
-		unitDefinition := CulinaryUnitDefinition{}
+		unitDefinition := BaseConversionTable{}
 
 		for _, key := range section.Keys() {
 			unitDefinition[key.Name()] = getMeasurement(key.Value())
@@ -156,7 +153,7 @@ func loadConversionTableINI(filename string, conversionTable ConversionTable, ba
 	}
 }
 
-func loadUnitAliasTable(filename string, unitAliasTable UnitAliasTable, baseUnitAliasTable BaseUnitAliasTable) {
+func loadUnitAliasTable(filename string, unitAliasTable UnitAliasTable, baseUnitAliasTable AliasTable) {
 	file, err := ini.Load(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -171,7 +168,7 @@ func loadUnitAliasTable(filename string, unitAliasTable UnitAliasTable, baseUnit
 	}
 
 	for _, section := range file.Sections() {
-		unitAliasDefinition := UnitAliasDefinition{}
+		unitAliasDefinition := AliasTable{}
 
 		for _, key := range section.Keys() {
 			unitAliasDefinition[key.Name()] = key.Value()
@@ -181,7 +178,7 @@ func loadUnitAliasTable(filename string, unitAliasTable UnitAliasTable, baseUnit
 	}
 }
 
-func loadProductAliasTable(filename string, productAliasTable ProductAliasTable) {
+func loadProductAliasTable(filename string, productAliasTable AliasTable) {
 	file, err := ini.Load(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -226,7 +223,7 @@ func getIngredientUnitMeasurement(unitConversionTable ConversionTable, baseConve
 	return
 }
 
-func convertIngredientUnit(unitConversionTable ConversionTable, baseConversionTable BaseConversionTable, unitAliasTable UnitAliasTable, baseUnitAliasTable BaseUnitAliasTable, productAliasTable ProductAliasTable, ingredient *Ingredient) {
+func convertIngredientUnit(unitConversionTable ConversionTable, baseConversionTable BaseConversionTable, unitAliasTable UnitAliasTable, baseUnitAliasTable AliasTable, productAliasTable AliasTable, ingredient *Ingredient) {
 	unitAliasDefinition, ok := unitAliasTable[ingredient.MeasurementUnit]
 	if ok {
 		unitAlias, ok := unitAliasDefinition[ingredient.Name]
@@ -429,8 +426,8 @@ func main() {
 	unitConversionTable := ConversionTable{}
 	baseConversionTable := BaseConversionTable{}
 	unitAliasTable := UnitAliasTable{}
-	baseUnitAliasTable := BaseUnitAliasTable{}
-	productAliasTable := ProductAliasTable{}
+	baseUnitAliasTable := AliasTable{}
+	productAliasTable := AliasTable{}
 	if conversionTableCSVFilename != "" {
 		loadConversionTableCSV(conversionTableCSVFilename, unitConversionTable, baseConversionTable)
 	}
