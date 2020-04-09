@@ -32,6 +32,7 @@ type BaseConversionTable map[string]*Measurement
 type UnitAliasDefinition map[string]string
 type UnitAliasTable map[string]UnitAliasDefinition
 type BaseUnitAliasTable map[string]string
+type ProductAliasTable map[string]string
 
 type Ingredient struct {
 	Name            string
@@ -180,6 +181,21 @@ func loadUnitAliasTable(filename string, unitAliasTable UnitAliasTable, baseUnit
 	}
 }
 
+func loadProductAliasTable(filename string, productAliasTable ProductAliasTable) {
+	file, err := ini.Load(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	section, err := file.GetSection("DEFAULT")
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, key := range section.Keys() {
+		productAliasTable[key.Name()] = key.Value()
+	}
+}
+
 func loadRecipeMetadata(reader io.Reader, recipeSources RecipeSourceMap) {
 	bufferedReader := bufio.NewReader(reader)
 	_, _, err := bufferedReader.ReadLine()
@@ -210,7 +226,7 @@ func getIngredientUnitMeasurement(unitConversionTable ConversionTable, baseConve
 	return
 }
 
-func convertIngredientUnit(unitConversionTable ConversionTable, baseConversionTable BaseConversionTable, unitAliasTable UnitAliasTable, baseUnitAliasTable BaseUnitAliasTable, ingredient *Ingredient) {
+func convertIngredientUnit(unitConversionTable ConversionTable, baseConversionTable BaseConversionTable, unitAliasTable UnitAliasTable, baseUnitAliasTable BaseUnitAliasTable, productAliasTable ProductAliasTable, ingredient *Ingredient) {
 	unitAliasDefinition, ok := unitAliasTable[ingredient.MeasurementUnit]
 	if ok {
 		unitAlias, ok := unitAliasDefinition[ingredient.Name]
@@ -220,6 +236,10 @@ func convertIngredientUnit(unitConversionTable ConversionTable, baseConversionTa
 		if ok {
 			ingredient.MeasurementUnit = unitAlias
 		}
+	}
+	productAlias, ok := productAliasTable[ingredient.Name]
+	if ok {
+		ingredient.Name = productAlias
 	}
 	ingredientUnitMeasurement := getIngredientUnitMeasurement(unitConversionTable, baseConversionTable, ingredient)
 	if ingredientUnitMeasurement != nil {
@@ -395,6 +415,9 @@ func main() {
 	var unitAliasTableFilename string
 	flag.StringVar(&unitAliasTableFilename, "unitAliasTable", "", "load an alias table from an INI file with the given name")
 
+	var productAliasTableFilename string
+	flag.StringVar(&productAliasTableFilename, "productAliasTable", "", "load a product alias table from an INI file with the given name")
+
 	flag.Parse()
 
 	args := flag.Args()
@@ -407,6 +430,7 @@ func main() {
 	baseConversionTable := BaseConversionTable{}
 	unitAliasTable := UnitAliasTable{}
 	baseUnitAliasTable := BaseUnitAliasTable{}
+	productAliasTable := ProductAliasTable{}
 	if conversionTableCSVFilename != "" {
 		loadConversionTableCSV(conversionTableCSVFilename, unitConversionTable, baseConversionTable)
 	}
@@ -415,6 +439,9 @@ func main() {
 	}
 	if unitAliasTableFilename != "" {
 		loadUnitAliasTable(unitAliasTableFilename, unitAliasTable, baseUnitAliasTable)
+	}
+	if productAliasTableFilename != "" {
+		loadProductAliasTable(productAliasTableFilename, productAliasTable)
 	}
 
 	recipeMetadataFile, err := os.Open(args[0])
@@ -438,8 +465,12 @@ func main() {
 	}
 
 	for _, recipe := range recipes {
-		for _, ingredient := range recipe {
-			convertIngredientUnit(unitConversionTable, baseConversionTable, unitAliasTable, baseUnitAliasTable, ingredient)
+		for ingredientName, ingredient := range recipe {
+			convertIngredientUnit(unitConversionTable, baseConversionTable, unitAliasTable, baseUnitAliasTable, productAliasTable, ingredient)
+			if ingredient.Name != ingredientName {
+				recipe[ingredient.Name] = ingredient
+				delete(recipe, ingredientName)
+			}
 		}
 	}
 
@@ -473,7 +504,11 @@ func main() {
 
 		for ingredientName, ingredient := range request.AvailableIngredients {
 			ingredient.Name = ingredientName
-			convertIngredientUnit(unitConversionTable, baseConversionTable, unitAliasTable, baseUnitAliasTable, ingredient)
+			convertIngredientUnit(unitConversionTable, baseConversionTable, unitAliasTable, baseUnitAliasTable, productAliasTable, ingredient)
+			if ingredient.Name != ingredientName {
+				request.AvailableIngredients[ingredient.Name] = ingredient
+				delete(request.AvailableIngredients, ingredientName)
+			}
 		}
 
 		if request.NumberOfServings > 1 {
