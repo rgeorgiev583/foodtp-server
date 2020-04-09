@@ -146,13 +146,17 @@ func loadRecipeMetadata(reader io.Reader, recipeSources RecipeSourceMap) {
 	}
 }
 
+func getIngredientUnitMeasurement(unitConversionTable ConversionTable, ingredient *Ingredient) (ingredientUnitMeasurement *Measurement) {
+	ingredientUnitDefinition, ok := unitConversionTable[ingredient.MeasurementUnit]
+	if ok {
+		ingredientUnitMeasurement, ok = ingredientUnitDefinition[ingredient.Name]
+	}
+	return
+}
+
 func convertIngredientUnits(unitConversionTable ConversionTable, ingredients IngredientMap) {
 	for _, ingredient := range ingredients {
-		ingredientUnitDefinition, ok := unitConversionTable[ingredient.MeasurementUnit]
-		var ingredientUnitMeasurement *Measurement
-		if ok {
-			ingredientUnitMeasurement, ok = ingredientUnitDefinition[ingredient.Name]
-		}
+		ingredientUnitMeasurement := getIngredientUnitMeasurement(unitConversionTable, ingredient)
 		if ingredientUnitMeasurement != nil {
 			ingredient.MeasurementUnit = ingredientUnitMeasurement.Unit
 			ingredient.Quantity *= ingredientUnitMeasurement.Quantity
@@ -263,12 +267,7 @@ func getPossibleRecipeSets(unitConversionTable ConversionTable, availableIngredi
 						return
 					}
 
-					ingredientUnitDefinition, ok := unitConversionTable[ingredient.MeasurementUnit]
-					var ingredientUnitMeasurement *Measurement
-					if ok {
-						ingredientUnitMeasurement, ok = ingredientUnitDefinition[ingredient.Name]
-					}
-
+					ingredientUnitMeasurement := getIngredientUnitMeasurement(unitConversionTable, ingredient)
 					if ingredientUnitMeasurement != nil && remainingIngredient.MeasurementUnit == ingredientUnitMeasurement.Unit {
 						remainingIngredient.Quantity -= ingredient.Quantity * ingredientUnitMeasurement.Quantity
 					} else if remainingIngredient.MeasurementUnit != ingredient.MeasurementUnit {
