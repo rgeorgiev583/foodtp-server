@@ -321,24 +321,29 @@ func main() {
 	var isDebugMode bool
 	flag.BoolVar(&isDebugMode, "debug", false, "enable debug mode")
 
+	var conversionTableCSVFilename string
+	flag.StringVar(&conversionTableCSVFilename, "conversionTableCSV", "", "load a conversion table from a CSV file with the given name")
+
 	var conversionTableINIFilename string
 	flag.StringVar(&conversionTableINIFilename, "conversionTableINI", "", "load a conversion table from an INI file with the given name")
 
 	flag.Parse()
 
 	args := flag.Args()
-	if len(args) < 3 {
+	if len(args) < 2 {
 		fmt.Fprintln(os.Stderr, "not enough arguments")
 		os.Exit(1)
 	}
 
 	unitConversionTable := ConversionTable{}
-	loadConversionTableCSV(args[0], unitConversionTable)
+	if conversionTableCSVFilename != "" {
+		loadConversionTableCSV(conversionTableCSVFilename, unitConversionTable)
+	}
 	if conversionTableINIFilename != "" {
 		loadConversionTableINI(conversionTableINIFilename, unitConversionTable)
 	}
 
-	recipeMetadataFile, err := os.Open(args[1])
+	recipeMetadataFile, err := os.Open(args[0])
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -348,7 +353,7 @@ func main() {
 	loadRecipeMetadata(recipeMetadataFile, recipeSources)
 
 	recipes := RecipeMap{}
-	for _, filename := range args[2:] {
+	for _, filename := range args[1:] {
 		file, err := os.Open(filename)
 		if err != nil {
 			log.Fatal(err)

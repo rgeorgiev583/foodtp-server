@@ -15,6 +15,7 @@
                 "-debug",
                 "-conversionTableINI",
                 "data/unit-conversion-table.ini",
+                "-conversionTableCSV",
                 "data/unit-conversion-table.csv",
                 "data/recipe-metadata.csv",
                 "data/recipe-ingredients.csv"
