@@ -295,7 +295,12 @@ func getPossibleRecipeSets(unitConversionTable ConversionTable, baseConversionTa
 						return
 					}
 
-					ingredientUnitMeasurement := getIngredientUnitMeasurement(unitConversionTable, baseConversionTable, ingredient)
+					var ingredientUnitMeasurement *Measurement
+					if remainingIngredient.MeasurementUnit != ingredient.MeasurementUnit {
+						ingredientUnitMeasurement = getIngredientUnitMeasurement(unitConversionTable, baseConversionTable, ingredient)
+					} else {
+						ingredientUnitMeasurement = &Measurement{Quantity: ingredient.Quantity, Unit: ingredient.MeasurementUnit}
+					}
 					if ingredientUnitMeasurement != nil && remainingIngredient.MeasurementUnit == ingredientUnitMeasurement.Unit {
 						remainingIngredient.Quantity -= ingredient.Quantity * ingredientUnitMeasurement.Quantity
 					} else if remainingIngredient.MeasurementUnit != ingredient.MeasurementUnit {
