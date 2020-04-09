@@ -1,0 +1,65 @@
+<!doctype html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+
+    <script type="text/javascript">
+        function loadProducts() {
+            function productResponseHandler() {
+                var responseJSON = JSON.parse(this.response);
+                responseJSON.forEach(function (product) {
+                    var productEntry = document.createElement("tr");
+
+                    var productCheckbox = document.createElement("input");
+                    productCheckbox.type = "checkbox";
+                    productCheckbox.id = product;
+                    var productNameNode = document.createTextNode(product);
+                    var productNameTableCell = document.createElement("td");
+                    productNameTableCell.appendChild(productCheckbox);
+                    productNameTableCell.appendChild(productNameNode);
+                    productEntry.appendChild(productNameTableCell);
+
+                    var productQuantity = document.createElement("input");
+                    productQuantity.type = "text";
+                    productQuantity.id = product + "_quantity";
+                    var productQuantityTableCell = document.createElement("td");
+                    productQuantityTableCell.appendChild(productQuantity);
+                    productEntry.appendChild(productQuantityTableCell);
+
+                    var productUnit = document.createElement("input");
+                    productUnit.type = "text";
+                    productUnit.id = product + "_unit";
+                    var productUnitTableCell = document.createElement("td");
+                    productUnitTableCell.appendChild(productUnit);
+                    productEntry.appendChild(productUnitTableCell);
+
+                    document.getElementById("products").appendChild(productEntry);
+                });
+            }
+
+            var productRequest = new XMLHttpRequest();
+            productRequest.addEventListener("load", productResponseHandler);
+            productRequest.open("GET", "http://localhost:8080/products");
+            productRequest.send();
+        }
+
+        window.onload = loadProducts;
+    </script>
+</head>
+
+<body>
+    <table>
+        <thead>
+            <tr>
+                <th>Съставка</th>
+                <th>Количество</th>
+                <th>Мерна единица</th>
+            </tr>
+        </thead>
+        <tbody id="products">
+        </tbody>
+    </table>
+</body>
+
+</html>
