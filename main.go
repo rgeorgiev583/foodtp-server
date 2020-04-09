@@ -300,7 +300,7 @@ func getPossibleRecipeSets(availableIngredients IngredientMap, recipes RecipeMap
 						continue
 					}
 
-					if remainingIngredient.MeasurementUnit != "на вкус" && remainingIngredient.Quantity < 0 {
+					if ingredient.MeasurementUnit != "на вкус" && remainingIngredient.Quantity < 0 {
 						delete(remainingIngredients, remainingIngredient.Name)
 						return
 					}
