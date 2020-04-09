@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/csv"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -262,15 +263,21 @@ func getPossibleRecipeSets(unitConversionTable ConversionTable, availableIngredi
 }
 
 func main() {
-	if len(os.Args) < 4 {
+	var isDebugMode bool
+	flag.BoolVar(&isDebugMode, "debug", false, "enable debug mode")
+
+	flag.Parse()
+
+	args := flag.Args()
+	if len(args) < 3 {
 		fmt.Fprintln(os.Stderr, "not enough arguments")
 		os.Exit(1)
 	}
 
 	unitConversionTable := ConversionTable{}
-	loadConversionTable(os.Args[1], unitConversionTable)
+	loadConversionTable(args[0], unitConversionTable)
 
-	recipeMetadataFile, err := os.Open(os.Args[2])
+	recipeMetadataFile, err := os.Open(args[1])
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -280,7 +287,7 @@ func main() {
 	loadRecipeMetadata(recipeMetadataFile, recipeSources)
 
 	recipes := RecipeMap{}
-	for _, filename := range os.Args[3:] {
+	for _, filename := range args[2:] {
 		file, err := os.Open(filename)
 		if err != nil {
 			log.Fatal(err)
@@ -299,6 +306,9 @@ func main() {
 		}
 
 		w.Header().Add("Content-Type", "application/json")
+		if isDebugMode {
+			w.Header().Add("Access-Control-Allow-Origin", "*")
+		}
 		w.Write(productsJSON)
 	})
 
@@ -354,6 +364,9 @@ func main() {
 		}
 
 		w.Header().Add("Content-Type", "application/json")
+		if isDebugMode {
+			w.Header().Add("Access-Control-Allow-Origin", "*")
+		}
 		w.Write(possibleRecipeResponseSetsJSON)
 	})
 

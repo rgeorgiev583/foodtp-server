@@ -11,7 +11,7 @@
             "mode": "auto",
             "program": "${fileDirname}",
             "env": {},
-            "args": ["data/unit-conversion-table.ini", "data/recipe-metadata.csv", "data/recipe-ingredients.csv"]
+            "args": ["-debug", "data/unit-conversion-table.ini", "data/recipe-metadata.csv", "data/recipe-ingredients.csv"]
         }
     ]
 }
