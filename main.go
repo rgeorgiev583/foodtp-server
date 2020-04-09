@@ -262,7 +262,7 @@ func getPossibleRecipeSets(unitConversionTable ConversionTable, availableIngredi
 }
 
 func main() {
-	if len(os.Args) < 2 {
+	if len(os.Args) < 4 {
 		fmt.Fprintln(os.Stderr, "not enough arguments")
 		os.Exit(1)
 	}
