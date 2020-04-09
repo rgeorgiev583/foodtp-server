@@ -182,13 +182,11 @@ func getIngredientUnitMeasurement(unitConversionTable ConversionTable, baseConve
 	return
 }
 
-func convertIngredientUnits(unitConversionTable ConversionTable, baseConversionTable BaseConversionTable, ingredients IngredientMap) {
-	for _, ingredient := range ingredients {
-		ingredientUnitMeasurement := getIngredientUnitMeasurement(unitConversionTable, baseConversionTable, ingredient)
-		if ingredientUnitMeasurement != nil {
-			ingredient.MeasurementUnit = ingredientUnitMeasurement.Unit
-			ingredient.Quantity *= ingredientUnitMeasurement.Quantity
-		}
+func convertIngredientUnit(unitConversionTable ConversionTable, baseConversionTable BaseConversionTable, ingredient *Ingredient) {
+	ingredientUnitMeasurement := getIngredientUnitMeasurement(unitConversionTable, baseConversionTable, ingredient)
+	if ingredientUnitMeasurement != nil {
+		ingredient.MeasurementUnit = ingredientUnitMeasurement.Unit
+		ingredient.Quantity *= ingredientUnitMeasurement.Quantity
 	}
 }
 
@@ -426,9 +424,8 @@ func main() {
 
 		for ingredientName, ingredient := range request.AvailableIngredients {
 			ingredient.Name = ingredientName
+			convertIngredientUnit(unitConversionTable, baseConversionTable, ingredient)
 		}
-
-		convertIngredientUnits(unitConversionTable, baseConversionTable, request.AvailableIngredients)
 
 		if request.NumberOfServings > 1 {
 			scaleRecipesByNumberOfServings(recipes, request.NumberOfServings)
