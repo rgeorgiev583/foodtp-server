@@ -29,6 +29,9 @@ type Measurement struct {
 type CulinaryUnitDefinition map[string]*Measurement
 type ConversionTable map[string]CulinaryUnitDefinition
 type BaseConversionTable map[string]*Measurement
+type UnitAliasDefinition map[string]string
+type UnitAliasTable map[string]UnitAliasDefinition
+type BaseUnitAliasTable map[string]string
 
 type Ingredient struct {
 	Name            string
@@ -152,6 +155,31 @@ func loadConversionTableINI(filename string, conversionTable ConversionTable, ba
 	}
 }
 
+func loadUnitAliasTable(filename string, unitAliasTable UnitAliasTable, baseUnitAliasTable BaseUnitAliasTable) {
+	file, err := ini.Load(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	baseUnitDefinitions, err := file.GetSection("DEFAULT")
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, key := range baseUnitDefinitions.Keys() {
+		baseUnitAliasTable[key.Name()] = key.Value()
+	}
+
+	for _, section := range file.Sections() {
+		unitAliasDefinition := UnitAliasDefinition{}
+
+		for _, key := range section.Keys() {
+			unitAliasDefinition[key.Name()] = key.Value()
+		}
+
+		unitAliasTable[section.Name()] = unitAliasDefinition
+	}
+}
+
 func loadRecipeMetadata(reader io.Reader, recipeSources RecipeSourceMap) {
 	bufferedReader := bufio.NewReader(reader)
 	_, _, err := bufferedReader.ReadLine()
@@ -182,7 +210,17 @@ func getIngredientUnitMeasurement(unitConversionTable ConversionTable, baseConve
 	return
 }
 
-func convertIngredientUnit(unitConversionTable ConversionTable, baseConversionTable BaseConversionTable, ingredient *Ingredient) {
+func convertIngredientUnit(unitConversionTable ConversionTable, baseConversionTable BaseConversionTable, unitAliasTable UnitAliasTable, baseUnitAliasTable BaseUnitAliasTable, ingredient *Ingredient) {
+	unitAliasDefinition, ok := unitAliasTable[ingredient.MeasurementUnit]
+	if ok {
+		unitAlias, ok := unitAliasDefinition[ingredient.Name]
+		if !ok {
+			unitAlias, ok = baseUnitAliasTable[ingredient.MeasurementUnit]
+		}
+		if ok {
+			ingredient.MeasurementUnit = unitAlias
+		}
+	}
 	ingredientUnitMeasurement := getIngredientUnitMeasurement(unitConversionTable, baseConversionTable, ingredient)
 	if ingredientUnitMeasurement != nil {
 		ingredient.MeasurementUnit = ingredientUnitMeasurement.Unit
@@ -354,6 +392,9 @@ func main() {
 	var conversionTableINIFilename string
 	flag.StringVar(&conversionTableINIFilename, "conversionTableINI", "", "load a conversion table from an INI file with the given name")
 
+	var unitAliasTableFilename string
+	flag.StringVar(&unitAliasTableFilename, "unitAliasTable", "", "load an alias table from an INI file with the given name")
+
 	flag.Parse()
 
 	args := flag.Args()
@@ -364,11 +405,16 @@ func main() {
 
 	unitConversionTable := ConversionTable{}
 	baseConversionTable := BaseConversionTable{}
+	unitAliasTable := UnitAliasTable{}
+	baseUnitAliasTable := BaseUnitAliasTable{}
 	if conversionTableCSVFilename != "" {
 		loadConversionTableCSV(conversionTableCSVFilename, unitConversionTable, baseConversionTable)
 	}
 	if conversionTableINIFilename != "" {
 		loadConversionTableINI(conversionTableINIFilename, unitConversionTable, baseConversionTable)
+	}
+	if unitAliasTableFilename != "" {
+		loadUnitAliasTable(unitAliasTableFilename, unitAliasTable, baseUnitAliasTable)
 	}
 
 	recipeMetadataFile, err := os.Open(args[0])
@@ -393,7 +439,7 @@ func main() {
 
 	for _, recipe := range recipes {
 		for _, ingredient := range recipe {
-			convertIngredientUnit(unitConversionTable, baseConversionTable, ingredient)
+			convertIngredientUnit(unitConversionTable, baseConversionTable, unitAliasTable, baseUnitAliasTable, ingredient)
 		}
 	}
 
@@ -427,7 +473,7 @@ func main() {
 
 		for ingredientName, ingredient := range request.AvailableIngredients {
 			ingredient.Name = ingredientName
-			convertIngredientUnit(unitConversionTable, baseConversionTable, ingredient)
+			convertIngredientUnit(unitConversionTable, baseConversionTable, unitAliasTable, baseUnitAliasTable, ingredient)
 		}
 
 		if request.NumberOfServings > 1 {

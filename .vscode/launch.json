@@ -17,6 +17,8 @@
                 "data/unit-conversion-table.ini",
                 "-conversionTableCSV",
                 "data/unit-conversion-table.csv",
+                "-unitAliasTable",
+                "data/unit-alias-table.ini",
                 "data/recipe-metadata.csv",
                 "data/recipe-ingredients.csv"
             ]
