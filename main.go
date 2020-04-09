@@ -162,15 +162,15 @@ func uniq(slice []string) (uniqSlice []string) {
 	return
 }
 
-func getSupportedIngredients(recipes RecipeMap) (ingredients []string) {
-	ingredients = []string{}
+func getSupportedProducts(recipes RecipeMap) (products []string) {
+	products = []string{}
 	for _, recipe := range recipes {
 		for _, ingredient := range recipe {
-			ingredients = append(ingredients, ingredient.Name)
+			products = append(products, ingredient.Name)
 		}
 	}
-	sort.Strings(ingredients)
-	ingredients = uniq(ingredients)
+	sort.Strings(products)
+	products = uniq(products)
 	return
 }
 
@@ -290,16 +290,16 @@ func main() {
 		importRecipesFromCSV(file, recipes)
 	}
 
-	http.HandleFunc("/ingredients", func(w http.ResponseWriter, r *http.Request) {
-		ingredients := getSupportedIngredients(recipes)
+	http.HandleFunc("/products", func(w http.ResponseWriter, r *http.Request) {
+		products := getSupportedProducts(recipes)
 
-		ingredientsJSON, err := json.Marshal(ingredients)
+		productsJSON, err := json.Marshal(products)
 		if err != nil {
 			log.Fatal(err)
 		}
 
 		w.Header().Add("Content-Type", "application/json")
-		w.Write(ingredientsJSON)
+		w.Write(productsJSON)
 	})
 
 	http.HandleFunc("/recipes", func(w http.ResponseWriter, r *http.Request) {
