@@ -268,7 +268,7 @@ func scaleRecipesByNumberOfServings(recipes RecipeMap, numberOfServings int) {
 	}
 }
 
-func getPossibleRecipeSets(unitConversionTable ConversionTable, baseConversionTable BaseConversionTable, availableIngredients IngredientMap, recipes RecipeMap) (recipeNameMatchingSetSlicesNoSubsets [][]string) {
+func getPossibleRecipeSets(availableIngredients IngredientMap, recipes RecipeMap) (recipeNameMatchingSetSlicesNoSubsets [][]string) {
 	recipeNameSet := set.NewSet()
 	for recipeName := range recipes {
 		recipeNameSet.Add(recipeName)
@@ -293,19 +293,11 @@ func getPossibleRecipeSets(unitConversionTable ConversionTable, baseConversionTa
 						return
 					}
 
-					var ingredientUnitMeasurement *Measurement
-					if remainingIngredient.MeasurementUnit != ingredient.MeasurementUnit {
-						ingredientUnitMeasurement = getIngredientUnitMeasurement(unitConversionTable, baseConversionTable, ingredient)
+					if remainingIngredient.MeasurementUnit == ingredient.MeasurementUnit {
+						remainingIngredient.Quantity -= ingredient.Quantity
 					} else {
-						ingredientUnitMeasurement = &Measurement{Quantity: ingredient.Quantity, Unit: ingredient.MeasurementUnit}
-					}
-					if ingredientUnitMeasurement != nil && remainingIngredient.MeasurementUnit == ingredientUnitMeasurement.Unit {
-						remainingIngredient.Quantity -= ingredient.Quantity * ingredientUnitMeasurement.Quantity
-					} else if remainingIngredient.MeasurementUnit != ingredient.MeasurementUnit {
 						log.Printf(`measurement units "%s" (from product list) and "%s" (from recipe) are incomparable`, remainingIngredient.MeasurementUnit, ingredient.MeasurementUnit)
 						continue
-					} else {
-						remainingIngredient.Quantity -= ingredient.Quantity
 					}
 
 					if remainingIngredient.MeasurementUnit != "на вкус" && remainingIngredient.Quantity < 0 {
@@ -394,6 +386,12 @@ func main() {
 		importRecipesFromCSV(file, recipes)
 	}
 
+	for _, recipe := range recipes {
+		for _, ingredient := range recipe {
+			convertIngredientUnit(unitConversionTable, baseConversionTable, ingredient)
+		}
+	}
+
 	http.HandleFunc("/products", func(w http.ResponseWriter, r *http.Request) {
 		products := getSupportedProducts(recipes)
 
@@ -431,7 +429,7 @@ func main() {
 			scaleRecipesByNumberOfServings(recipes, request.NumberOfServings)
 		}
 
-		possibleRecipeSets := getPossibleRecipeSets(unitConversionTable, baseConversionTable, request.AvailableIngredients, recipes)
+		possibleRecipeSets := getPossibleRecipeSets(request.AvailableIngredients, recipes)
 		for _, recipeNameSubsetSlice := range possibleRecipeSets {
 			fmt.Println(strings.Join(recipeNameSubsetSlice, ", "))
 		}
