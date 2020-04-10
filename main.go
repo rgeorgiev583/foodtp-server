@@ -26,10 +26,10 @@ type Measurement struct {
 	Unit     string
 }
 
-type BaseConversionTable map[string]*Measurement
-type ConversionTable map[string]BaseConversionTable
-type AliasTable map[string]string
-type UnitAliasTable map[string]AliasTable
+type BaseConversionMap map[string]*Measurement
+type ConversionTable map[string]BaseConversionMap
+type AliasMap map[string]string
+type UnitAliasTable map[string]AliasMap
 
 type Product struct {
 	Name            string
@@ -38,7 +38,7 @@ type Product struct {
 }
 
 type ProductMap map[string]*Product
-type RecipeMap map[string]ProductMap
+type RecipeTable map[string]ProductMap
 type RecipeSourceMap map[string]string
 
 type RecipeSuggestionRequest struct {
@@ -51,7 +51,7 @@ type RecipeSuggestionResponse struct {
 	Source string `json:"source"`
 }
 
-func loadConversionTableCSV(filename string, conversionTable ConversionTable, baseConversionTable BaseConversionTable) {
+func loadConversionTableCSV(filename string, conversionTable ConversionTable, baseConversionMap BaseConversionMap) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -90,7 +90,7 @@ func loadConversionTableCSV(filename string, conversionTable ConversionTable, ba
 				log.Fatal(err)
 			}
 		}
-		baseConversionTable[culinaryUnit] = &Measurement{
+		baseConversionMap[culinaryUnit] = &Measurement{
 			Quantity: measurementQuantity,
 			Unit:     culinaryUnitDescriptionMatch[3],
 		}
@@ -110,7 +110,7 @@ func loadConversionTableCSV(filename string, conversionTable ConversionTable, ba
 
 			unitDefinition, ok := conversionTable[culinaryUnits[i]]
 			if !ok {
-				unitDefinition = BaseConversionTable{}
+				unitDefinition = BaseConversionMap{}
 				conversionTable[culinaryUnits[i]] = unitDefinition
 			}
 
@@ -128,7 +128,7 @@ func getMeasurement(measurementStr string) (measurement *Measurement) {
 	return
 }
 
-func loadConversionTableINI(filename string, conversionTable ConversionTable, baseConversionTable BaseConversionTable) {
+func loadConversionTableINI(filename string, conversionTable ConversionTable, baseConversionMap BaseConversionMap) {
 	file, err := ini.Load(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -139,11 +139,11 @@ func loadConversionTableINI(filename string, conversionTable ConversionTable, ba
 		log.Fatal(err)
 	}
 	for _, key := range baseUnitDefinitions.Keys() {
-		baseConversionTable[key.Name()] = getMeasurement(key.Value())
+		baseConversionMap[key.Name()] = getMeasurement(key.Value())
 	}
 
 	for _, section := range file.Sections() {
-		unitDefinition := BaseConversionTable{}
+		unitDefinition := BaseConversionMap{}
 
 		for _, key := range section.Keys() {
 			unitDefinition[key.Name()] = getMeasurement(key.Value())
@@ -153,7 +153,7 @@ func loadConversionTableINI(filename string, conversionTable ConversionTable, ba
 	}
 }
 
-func loadUnitAliasTable(filename string, unitAliasTable UnitAliasTable, baseUnitAliasTable AliasTable) {
+func loadUnitAliasTable(filename string, unitAliasTable UnitAliasTable, baseUnitAliasMap AliasMap) {
 	file, err := ini.Load(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -164,11 +164,11 @@ func loadUnitAliasTable(filename string, unitAliasTable UnitAliasTable, baseUnit
 		log.Fatal(err)
 	}
 	for _, key := range baseUnitDefinitions.Keys() {
-		baseUnitAliasTable[key.Name()] = key.Value()
+		baseUnitAliasMap[key.Name()] = key.Value()
 	}
 
 	for _, section := range file.Sections() {
-		unitAliasDefinition := AliasTable{}
+		unitAliasDefinition := AliasMap{}
 
 		for _, key := range section.Keys() {
 			unitAliasDefinition[key.Name()] = key.Value()
@@ -178,7 +178,7 @@ func loadUnitAliasTable(filename string, unitAliasTable UnitAliasTable, baseUnit
 	}
 }
 
-func loadProductAliasTable(filename string, productAliasTable AliasTable) {
+func loadProductAliasMap(filename string, productAliasMap AliasMap) {
 	file, err := ini.Load(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -189,7 +189,7 @@ func loadProductAliasTable(filename string, productAliasTable AliasTable) {
 		log.Fatal(err)
 	}
 	for _, key := range section.Keys() {
-		productAliasTable[key.Name()] = key.Value()
+		productAliasMap[key.Name()] = key.Value()
 	}
 }
 
@@ -213,39 +213,39 @@ func loadRecipeMetadata(reader io.Reader, recipeSources RecipeSourceMap) {
 	}
 }
 
-func getProductUnitMeasurement(unitConversionTable ConversionTable, baseConversionTable BaseConversionTable, product *Product) (productUnitMeasurement *Measurement) {
+func getProductUnitMeasurement(unitConversionTable ConversionTable, baseConversionMap BaseConversionMap, product *Product) (productUnitMeasurement *Measurement) {
 	productUnitDefinition, ok := unitConversionTable[product.MeasurementUnit]
 	if ok {
 		productUnitMeasurement, ok = productUnitDefinition[product.Name]
 	} else {
-		productUnitMeasurement, ok = baseConversionTable[product.MeasurementUnit]
+		productUnitMeasurement, ok = baseConversionMap[product.MeasurementUnit]
 	}
 	return
 }
 
-func convertProductUnit(unitConversionTable ConversionTable, baseConversionTable BaseConversionTable, unitAliasTable UnitAliasTable, baseUnitAliasTable AliasTable, productAliasTable AliasTable, product *Product) {
+func convertProductUnit(unitConversionTable ConversionTable, baseConversionMap BaseConversionMap, unitAliasTable UnitAliasTable, baseUnitAliasMap AliasMap, productAliasMap AliasMap, product *Product) {
 	unitAliasDefinition, ok := unitAliasTable[product.MeasurementUnit]
 	if ok {
 		unitAlias, ok := unitAliasDefinition[product.Name]
 		if !ok {
-			unitAlias, ok = baseUnitAliasTable[product.MeasurementUnit]
+			unitAlias, ok = baseUnitAliasMap[product.MeasurementUnit]
 		}
 		if ok {
 			product.MeasurementUnit = unitAlias
 		}
 	}
-	productAlias, ok := productAliasTable[product.Name]
+	productAlias, ok := productAliasMap[product.Name]
 	if ok {
 		product.Name = productAlias
 	}
-	productUnitMeasurement := getProductUnitMeasurement(unitConversionTable, baseConversionTable, product)
+	productUnitMeasurement := getProductUnitMeasurement(unitConversionTable, baseConversionMap, product)
 	if productUnitMeasurement != nil {
 		product.MeasurementUnit = productUnitMeasurement.Unit
 		product.Quantity *= productUnitMeasurement.Quantity
 	}
 }
 
-func importRecipesFromCSV(reader io.Reader, recipes RecipeMap) {
+func importRecipesFromCSV(reader io.Reader, recipes RecipeTable) {
 	bufferedReader := bufio.NewReader(reader)
 	_, _, err := bufferedReader.ReadLine()
 	if err != nil {
@@ -303,7 +303,7 @@ func uniq(slice []string) (uniqSlice []string) {
 	return
 }
 
-func getSupportedProducts(recipes RecipeMap) (products []string) {
+func getSupportedProducts(recipes RecipeTable) (products []string) {
 	products = []string{}
 	for _, recipe := range recipes {
 		for _, ingredient := range recipe {
@@ -315,7 +315,7 @@ func getSupportedProducts(recipes RecipeMap) (products []string) {
 	return
 }
 
-func scaleRecipesByNumberOfServings(recipes RecipeMap, numberOfServings int) {
+func scaleRecipesByNumberOfServings(recipes RecipeTable, numberOfServings int) {
 	for _, recipe := range recipes {
 		for _, ingredient := range recipe {
 			ingredient.Quantity *= 2
@@ -323,7 +323,7 @@ func scaleRecipesByNumberOfServings(recipes RecipeMap, numberOfServings int) {
 	}
 }
 
-func getPossibleRecipeSets(availableProducts ProductMap, recipes RecipeMap) (recipeNameMatchingSetSlicesNoSubsets [][]string) {
+func getPossibleRecipeSets(availableProducts ProductMap, recipes RecipeTable) (recipeNameMatchingSetSlicesNoSubsets [][]string) {
 	recipeNameSet := set.NewSet()
 	for recipeName := range recipes {
 		recipeNameSet.Add(recipeName)
@@ -412,8 +412,8 @@ func main() {
 	var unitAliasTableFilename string
 	flag.StringVar(&unitAliasTableFilename, "unitAliasTable", "", "load an alias table from an INI file with the given name")
 
-	var productAliasTableFilename string
-	flag.StringVar(&productAliasTableFilename, "productAliasTable", "", "load a product alias table from an INI file with the given name")
+	var productAliasMapFilename string
+	flag.StringVar(&productAliasMapFilename, "productAliasMap", "", "load a product alias map from an INI file with the given name")
 
 	flag.Parse()
 
@@ -424,21 +424,21 @@ func main() {
 	}
 
 	unitConversionTable := ConversionTable{}
-	baseConversionTable := BaseConversionTable{}
+	baseConversionMap := BaseConversionMap{}
 	unitAliasTable := UnitAliasTable{}
-	baseUnitAliasTable := AliasTable{}
-	productAliasTable := AliasTable{}
+	baseUnitAliasMap := AliasMap{}
+	productAliasMap := AliasMap{}
 	if conversionTableCSVFilename != "" {
-		loadConversionTableCSV(conversionTableCSVFilename, unitConversionTable, baseConversionTable)
+		loadConversionTableCSV(conversionTableCSVFilename, unitConversionTable, baseConversionMap)
 	}
 	if conversionTableINIFilename != "" {
-		loadConversionTableINI(conversionTableINIFilename, unitConversionTable, baseConversionTable)
+		loadConversionTableINI(conversionTableINIFilename, unitConversionTable, baseConversionMap)
 	}
 	if unitAliasTableFilename != "" {
-		loadUnitAliasTable(unitAliasTableFilename, unitAliasTable, baseUnitAliasTable)
+		loadUnitAliasTable(unitAliasTableFilename, unitAliasTable, baseUnitAliasMap)
 	}
-	if productAliasTableFilename != "" {
-		loadProductAliasTable(productAliasTableFilename, productAliasTable)
+	if productAliasMapFilename != "" {
+		loadProductAliasMap(productAliasMapFilename, productAliasMap)
 	}
 
 	recipeMetadataFile, err := os.Open(args[0])
@@ -450,7 +450,7 @@ func main() {
 	recipeSources := RecipeSourceMap{}
 	loadRecipeMetadata(recipeMetadataFile, recipeSources)
 
-	recipes := RecipeMap{}
+	recipes := RecipeTable{}
 	for _, filename := range args[1:] {
 		file, err := os.Open(filename)
 		if err != nil {
@@ -463,7 +463,7 @@ func main() {
 
 	for _, recipe := range recipes {
 		for ingredientName, ingredient := range recipe {
-			convertProductUnit(unitConversionTable, baseConversionTable, unitAliasTable, baseUnitAliasTable, productAliasTable, ingredient)
+			convertProductUnit(unitConversionTable, baseConversionMap, unitAliasTable, baseUnitAliasMap, productAliasMap, ingredient)
 			if ingredient.Name != ingredientName {
 				recipe[ingredient.Name] = ingredient
 				delete(recipe, ingredientName)
@@ -501,7 +501,7 @@ func main() {
 
 		for productName, product := range request.AvailableProducts {
 			product.Name = productName
-			convertProductUnit(unitConversionTable, baseConversionTable, unitAliasTable, baseUnitAliasTable, productAliasTable, product)
+			convertProductUnit(unitConversionTable, baseConversionMap, unitAliasTable, baseUnitAliasMap, productAliasMap, product)
 			if product.Name != productName {
 				request.AvailableProducts[product.Name] = product
 				delete(request.AvailableProducts, productName)
