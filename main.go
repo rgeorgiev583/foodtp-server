@@ -390,13 +390,17 @@ func getMatchingRecipeNameSets(availableProducts ProductMap, recipeNamePowerSet 
 					convertedIngredientQuantity := ingredient.Quantity * float64(numberOfServings)
 					if remainingProduct.MeasurementUnit != ingredient.MeasurementUnit {
 						productDensity, ok := densityMap[ingredient.Name]
+						areUnitsIncomparable := false
 						if ok {
 							if ingredient.MeasurementUnit == productDensity.VolumeUnit && remainingProduct.MeasurementUnit == productDensity.MassUnit {
 								convertedIngredientQuantity *= productDensity.Quantity
 							} else if ingredient.MeasurementUnit == productDensity.MassUnit && remainingProduct.MeasurementUnit == productDensity.VolumeUnit {
 								convertedIngredientQuantity /= productDensity.Quantity
+							} else {
+								areUnitsIncomparable = true
 							}
-						} else {
+						}
+						if !ok || areUnitsIncomparable {
 							log.Printf(`measurement units "%s" (from product list) and "%s" (from recipe) are incomparable`, remainingProduct.MeasurementUnit, ingredient.MeasurementUnit)
 							return
 						}
