@@ -363,15 +363,7 @@ func importRecipesFromCSV(filename string, recipes RecipeTable, products StringS
 	return
 }
 
-func scaleRecipesByNumberOfServings(recipes RecipeTable, numberOfServings int) {
-	for _, recipe := range recipes {
-		for _, ingredient := range recipe {
-			ingredient.Quantity *= 2
-		}
-	}
-}
-
-func getMatchingRecipeNameSets(availableProducts ProductMap, recipeNamePowerSet set.Set, recipes RecipeTable, densityMap DensityMap) (recipeNameMatchingSetSlicesNoSubsets [][]string) {
+func getMatchingRecipeNameSets(availableProducts ProductMap, recipeNamePowerSet set.Set, recipes RecipeTable, densityMap DensityMap, numberOfServings int) (recipeNameMatchingSetSlicesNoSubsets [][]string) {
 	recipeNameMatchingSets := []set.Set{}
 
 	for recipeNameSubsetInterface := range recipeNamePowerSet.Iter() {
@@ -395,24 +387,22 @@ func getMatchingRecipeNameSets(availableProducts ProductMap, recipeNamePowerSet 
 						continue
 					}
 
-					if remainingProduct.MeasurementUnit == ingredient.MeasurementUnit {
-						remainingProduct.Quantity -= ingredient.Quantity
-					} else {
+					convertedIngredientQuantity := ingredient.Quantity * float64(numberOfServings)
+					if remainingProduct.MeasurementUnit != ingredient.MeasurementUnit {
 						productDensity, ok := densityMap[ingredient.Name]
 						if ok {
-							var convertedIngredientQuantity float64
 							if ingredient.MeasurementUnit == productDensity.VolumeUnit && remainingProduct.MeasurementUnit == productDensity.MassUnit {
-								convertedIngredientQuantity = ingredient.Quantity * productDensity.Quantity
+								convertedIngredientQuantity *= productDensity.Quantity
 							} else if ingredient.MeasurementUnit == productDensity.MassUnit && remainingProduct.MeasurementUnit == productDensity.VolumeUnit {
-								convertedIngredientQuantity = ingredient.Quantity / productDensity.Quantity
+								convertedIngredientQuantity /= productDensity.Quantity
 							}
-							remainingProduct.Quantity -= convertedIngredientQuantity
 						} else {
 							log.Printf(`measurement units "%s" (from product list) and "%s" (from recipe) are incomparable`, remainingProduct.MeasurementUnit, ingredient.MeasurementUnit)
 							return
 						}
 					}
 
+					remainingProduct.Quantity -= convertedIngredientQuantity
 					if remainingProduct.Quantity < 0 {
 						delete(remainingProducts, remainingProduct.Name)
 						return
@@ -596,11 +586,7 @@ func main() {
 			}
 		}
 
-		if request.NumberOfServings > 1 {
-			scaleRecipesByNumberOfServings(recipes, request.NumberOfServings)
-		}
-
-		matchingRecipeNameSets := getMatchingRecipeNameSets(request.AvailableProducts, recipeNamePowerSet, recipes, densityMap)
+		matchingRecipeNameSets := getMatchingRecipeNameSets(request.AvailableProducts, recipeNamePowerSet, recipes, densityMap, request.NumberOfServings)
 		for _, matchingRecipeNameSet := range matchingRecipeNameSets {
 			fmt.Println(strings.Join(matchingRecipeNameSet, ", "))
 		}
