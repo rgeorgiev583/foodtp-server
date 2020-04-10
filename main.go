@@ -411,7 +411,7 @@ func getPossibleRecipeSets(availableProducts ProductMap, recipes RecipeTable, de
 							remainingProduct.Quantity -= convertedIngredientQuantity
 						} else {
 							log.Printf(`measurement units "%s" (from product list) and "%s" (from recipe) are incomparable`, remainingProduct.MeasurementUnit, ingredient.MeasurementUnit)
-							continue
+							return
 						}
 					}
 
