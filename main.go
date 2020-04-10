@@ -35,7 +35,7 @@ type UnitAliasTable map[string]AliasMap
 type Product struct {
 	Name            string
 	Quantity        float64 `json:"quantity"`
-	MeasurementUnit string  `json:"unit"`
+	MeasurementUnit string  `json:"measurementUnit"`
 }
 
 type ProductMap map[string]*Product
@@ -48,7 +48,7 @@ type ProductUnitsRequest struct {
 
 type RecipeSuggestionRequest struct {
 	NumberOfServings  int        `json:"numberOfServings"`
-	AvailableProducts ProductMap `json:"products"`
+	AvailableProducts ProductMap `json:"availableProducts"`
 }
 
 type RecipeSuggestionResponse struct {

@@ -1,57 +1,57 @@
 {
   "numberOfServings": 1,
-  "products": {
+  "availableProducts": {
     "скариди": {
       "quantity": 500,
-      "unit": "г"
+      "measurementUnit": "г"
     },
     "чесън": {
       "quantity": 4,
-      "unit": "скилидка"
+      "measurementUnit": "скилидка"
     },
     "лимон": {
       "quantity": 1,
-      "unit": "брой"
+      "measurementUnit": "брой"
     },
     "зехтин": {
       "quantity": 3,
-      "unit": "супена лъжица"
+      "measurementUnit": "супена лъжица"
     },
     "магданоз": {
       "quantity": 1,
-      "unit": "връзка"
+      "measurementUnit": "връзка"
     },
     "сол": {
       "quantity": 500,
-      "unit": "г"
+      "measurementUnit": "г"
     },
     "сушени чушки": {
       "quantity": 20,
-      "unit": "г"
+      "measurementUnit": "г"
     },
     "боб": {
       "quantity": 1,
-      "unit": "чаена чаша"
+      "measurementUnit": "чаена чаша"
     },
     "лук": {
       "quantity": 2,
-      "unit": "глава"
+      "measurementUnit": "глава"
     },
     "червен пипер": {
       "quantity": 2,
-      "unit": "супена лъжица"
+      "measurementUnit": "супена лъжица"
     },
     "джоджен": {
       "quantity": 3,
-      "unit": "чаена лъжица"
+      "measurementUnit": "чаена лъжица"
     },
     "чубрица": {
       "quantity": 1,
-      "unit": "чаена лъжица"
+      "measurementUnit": "чаена лъжица"
     },
     "олио": {
       "quantity": 10,
-      "unit": "мл"
+      "measurementUnit": "мл"
     }
   }
 }
