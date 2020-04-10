@@ -20,6 +20,8 @@ import (
 	set "github.com/deckarep/golang-set"
 )
 
+type StringSet map[string]struct{}
+
 type Measurement struct {
 	Quantity float64
 	Unit     string
@@ -48,6 +50,15 @@ type RecipeSuggestionRequest struct {
 type RecipeSuggestionResponse struct {
 	Name   string `json:"name"`
 	Source string `json:"source"`
+}
+
+func convertStringSetToSortedSlice(set StringSet) (slice []string) {
+	slice = make([]string, 0, len(set))
+	for product := range set {
+		slice = append(slice, product)
+	}
+	sort.Strings(slice)
+	return
 }
 
 func loadConversionTableCSV(filename string, conversionTable ConversionTable, baseConversionMap BaseConversionMap) {
@@ -246,7 +257,7 @@ func convertProductUnit(unitConversionTable ConversionTable, baseConversionMap B
 	}
 }
 
-func importRecipesFromCSV(filename string, recipes RecipeTable) {
+func importRecipesFromCSV(filename string, recipes RecipeTable, products StringSet) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -286,23 +297,9 @@ func importRecipesFromCSV(filename string, recipes RecipeTable) {
 			Quantity:        ingredientQuantity,
 			MeasurementUnit: ingredientRecord[2],
 		}
+		products[ingredientRecord[0]] = struct{}{}
 	}
 
-	return
-}
-
-func getSupportedProducts(recipes RecipeTable) (products []string) {
-	productSet := map[string]struct{}{}
-	for _, recipe := range recipes {
-		for _, ingredient := range recipe {
-			productSet[ingredient.Name] = struct{}{}
-		}
-	}
-	products = make([]string, 0, len(productSet))
-	for product := range productSet {
-		products = append(products, product)
-	}
-	sort.Strings(products)
 	return
 }
 
@@ -436,9 +433,11 @@ func main() {
 	loadRecipeMetadata(args[0], recipeSources)
 
 	recipes := RecipeTable{}
+	productSet := StringSet{}
 	for _, filename := range args[1:] {
-		importRecipesFromCSV(filename, recipes)
+		importRecipesFromCSV(filename, recipes, productSet)
 	}
+	products := convertStringSetToSortedSlice(productSet)
 
 	for _, recipe := range recipes {
 		for ingredientName, ingredient := range recipe {
@@ -451,8 +450,6 @@ func main() {
 	}
 
 	http.HandleFunc("/products", func(w http.ResponseWriter, r *http.Request) {
-		products := getSupportedProducts(recipes)
-
 		productsJSON, err := json.Marshal(products)
 		if err != nil {
 			log.Fatal(err)
