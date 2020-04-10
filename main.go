@@ -499,6 +499,17 @@ func main() {
 		loadProductAliasMap(productAliasMapFilename, productAliasMap)
 	}
 
+	for _, culinaryUnitDefinition := range unitConversionTable {
+		for product := range culinaryUnitDefinition {
+			unitSet, ok := productUnitsMap[product]
+			if ok {
+				for _, culinaryUnitBaseDefinition := range baseConversionMap {
+					unitSet[culinaryUnitBaseDefinition.Unit] = struct{}{}
+				}
+			}
+		}
+	}
+
 	recipeSources := RecipeSourceMap{}
 	loadRecipeMetadata(args[0], recipeSources)
 
