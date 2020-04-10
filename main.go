@@ -368,7 +368,7 @@ func scaleRecipesByNumberOfServings(recipes RecipeTable, numberOfServings int) {
 	}
 }
 
-func getPossibleRecipeSets(availableProducts ProductMap, recipeNamePowerSet set.Set, recipes RecipeTable, densityMap DensityMap) (recipeNameMatchingSetSlicesNoSubsets [][]string) {
+func getMatchingRecipeSets(availableProducts ProductMap, recipeNamePowerSet set.Set, recipes RecipeTable, densityMap DensityMap) (recipeNameMatchingSetSlicesNoSubsets [][]string) {
 	recipeNameMatchingSets := []set.Set{}
 
 	for recipeNameSubsetInterface := range recipeNamePowerSet.Iter() {
@@ -597,7 +597,7 @@ func main() {
 			scaleRecipesByNumberOfServings(recipes, request.NumberOfServings)
 		}
 
-		possibleRecipeSets := getPossibleRecipeSets(request.AvailableProducts, recipeNamePowerSet, recipes, densityMap)
+		possibleRecipeSets := getMatchingRecipeSets(request.AvailableProducts, recipeNamePowerSet, recipes, densityMap)
 		for _, recipeNameSubsetSlice := range possibleRecipeSets {
 			fmt.Println(strings.Join(recipeNameSubsetSlice, ", "))
 		}
