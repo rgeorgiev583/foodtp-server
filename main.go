@@ -56,6 +56,9 @@ type RecipeSuggestionResponse struct {
 	Source string `json:"source"`
 }
 
+const iniDefaultSectionName = "DEFAULT"
+const fieldNotApplicableStr = "-"
+
 func convertStringSetToSortedSlice(set StringSet) (slice []string) {
 	slice = make([]string, 0, len(set))
 	for product := range set {
@@ -98,7 +101,7 @@ func loadConversionTableCSV(filename string, conversionTable ConversionTable, ba
 
 		measurementQuantityStr := culinaryUnitDescriptionMatch[2]
 		var measurementQuantity float64
-		if measurementQuantityStr != "-" {
+		if measurementQuantityStr != fieldNotApplicableStr {
 			measurementQuantity, err = strconv.ParseFloat(measurementQuantityStr, 64)
 			if err != nil {
 				log.Fatal(err)
@@ -120,7 +123,7 @@ func loadConversionTableCSV(filename string, conversionTable ConversionTable, ba
 		}
 
 		for i, measurementStr := range productRecord[1:] {
-			if measurementStr == "-" {
+			if measurementStr == fieldNotApplicableStr {
 				continue
 			}
 
@@ -159,7 +162,7 @@ func loadConversionTableINI(filename string, conversionTable ConversionTable, ba
 		log.Fatal(err)
 	}
 
-	baseUnitDefinitions, err := file.GetSection("DEFAULT")
+	baseUnitDefinitions, err := file.GetSection(iniDefaultSectionName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -195,7 +198,7 @@ func loadUnitAliasTable(filename string, unitAliasTable UnitAliasTable, baseUnit
 		log.Fatal(err)
 	}
 
-	baseUnitDefinitions, err := file.GetSection("DEFAULT")
+	baseUnitDefinitions, err := file.GetSection(iniDefaultSectionName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -220,7 +223,7 @@ func loadProductAliasMap(filename string, productAliasMap AliasMap) {
 		log.Fatal(err)
 	}
 
-	section, err := file.GetSection("DEFAULT")
+	section, err := file.GetSection(iniDefaultSectionName)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -311,7 +314,7 @@ func importRecipesFromCSV(filename string, recipes RecipeTable, products StringS
 		}
 		ingredientQuantityStr := ingredientRecord[1]
 		var ingredientQuantity float64
-		if ingredientQuantityStr != "-" {
+		if ingredientQuantityStr != fieldNotApplicableStr {
 			ingredientQuantity, err = strconv.ParseFloat(ingredientQuantityStr, 64)
 			if err != nil {
 				log.Fatal(err)
