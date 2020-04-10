@@ -6,9 +6,9 @@
 
     <script type="text/javascript">
         function loadProducts() {
-            function productResponseHandler() {
-                var responseJSON = JSON.parse(this.response);
-                responseJSON.forEach(function (product) {
+            function productsResponseHandler() {
+                var productsResponse = JSON.parse(this.response);
+                productsResponse.forEach(function (product) {
                     var productEntry = document.createElement("tr");
 
                     var productCheckbox = document.createElement("input");
@@ -38,10 +38,10 @@
                 });
             }
 
-            var productRequest = new XMLHttpRequest();
-            productRequest.addEventListener("load", productResponseHandler);
-            productRequest.open("GET", "http://localhost:8080/products");
-            productRequest.send();
+            var productsRequest = new XMLHttpRequest();
+            productsRequest.addEventListener("load", productsResponseHandler);
+            productsRequest.open("GET", "http://localhost:8080/products");
+            productsRequest.send();
         }
 
         window.onload = loadProducts;
