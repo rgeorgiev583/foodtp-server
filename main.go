@@ -42,6 +42,10 @@ type ProductMap map[string]*Product
 type RecipeTable map[string]ProductMap
 type RecipeSourceMap map[string]string
 
+type ProductUnitsRequest struct {
+	Product string `json:"product"`
+}
+
 type RecipeSuggestionRequest struct {
 	NumberOfServings  int        `json:"numberOfServings"`
 	AvailableProducts ProductMap `json:"products"`
@@ -61,7 +65,7 @@ func convertStringSetToSortedSlice(set StringSet) (slice []string) {
 	return
 }
 
-func loadConversionTableCSV(filename string, conversionTable ConversionTable, baseConversionMap BaseConversionMap) {
+func loadConversionTableCSV(filename string, conversionTable ConversionTable, baseConversionMap BaseConversionMap, productUnitsMap map[string]StringSet) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -107,6 +111,14 @@ func loadConversionTableCSV(filename string, conversionTable ConversionTable, ba
 	}
 
 	for _, productRecord := range productRecords[1:] {
+		product := productRecord[0]
+
+		unitSet, ok := productUnitsMap[product]
+		if !ok {
+			unitSet = StringSet{}
+			productUnitsMap[product] = unitSet
+		}
+
 		for i, measurementStr := range productRecord[1:] {
 			if measurementStr == "-" {
 				continue
@@ -118,13 +130,16 @@ func loadConversionTableCSV(filename string, conversionTable ConversionTable, ba
 				log.Fatal(err)
 			}
 
-			unitDefinition, ok := conversionTable[culinaryUnits[i]]
+			culinaryUnit := culinaryUnits[i]
+			unitDefinition, ok := conversionTable[culinaryUnit]
 			if !ok {
 				unitDefinition = BaseConversionMap{}
-				conversionTable[culinaryUnits[i]] = unitDefinition
+				conversionTable[culinaryUnit] = unitDefinition
 			}
+			unitDefinition[product] = measurement
 
-			unitDefinition[productRecord[0]] = measurement
+			unitSet[culinaryUnit] = struct{}{}
+			unitSet[measurement.Unit] = struct{}{}
 		}
 	}
 }
@@ -138,7 +153,7 @@ func getMeasurement(measurementStr string) (measurement *Measurement) {
 	return
 }
 
-func loadConversionTableINI(filename string, conversionTable ConversionTable, baseConversionMap BaseConversionMap) {
+func loadConversionTableINI(filename string, conversionTable ConversionTable, baseConversionMap BaseConversionMap, productUnitsMap map[string]StringSet) {
 	file, err := ini.Load(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -153,13 +168,24 @@ func loadConversionTableINI(filename string, conversionTable ConversionTable, ba
 	}
 
 	for _, section := range file.Sections() {
+		unit := section.Name()
 		unitDefinition := BaseConversionMap{}
 
 		for _, key := range section.Keys() {
-			unitDefinition[key.Name()] = getMeasurement(key.Value())
+			product := key.Name()
+			measurement := getMeasurement(key.Value())
+			unitDefinition[product] = measurement
+
+			unitSet, ok := productUnitsMap[product]
+			if !ok {
+				unitSet = StringSet{}
+				productUnitsMap[product] = unitSet
+			}
+			unitSet[unit] = struct{}{}
+			unitSet[measurement.Unit] = struct{}{}
 		}
 
-		conversionTable[section.Name()] = unitDefinition
+		conversionTable[unit] = unitDefinition
 	}
 }
 
@@ -413,14 +439,15 @@ func main() {
 
 	unitConversionTable := ConversionTable{}
 	baseConversionMap := BaseConversionMap{}
+	productUnitsMap := map[string]StringSet{}
 	unitAliasTable := UnitAliasTable{}
 	baseUnitAliasMap := AliasMap{}
 	productAliasMap := AliasMap{}
 	if conversionTableCSVFilename != "" {
-		loadConversionTableCSV(conversionTableCSVFilename, unitConversionTable, baseConversionMap)
+		loadConversionTableCSV(conversionTableCSVFilename, unitConversionTable, baseConversionMap, productUnitsMap)
 	}
 	if conversionTableINIFilename != "" {
-		loadConversionTableINI(conversionTableINIFilename, unitConversionTable, baseConversionMap)
+		loadConversionTableINI(conversionTableINIFilename, unitConversionTable, baseConversionMap, productUnitsMap)
 	}
 	if unitAliasTableFilename != "" {
 		loadUnitAliasTable(unitAliasTableFilename, unitAliasTable, baseUnitAliasMap)
@@ -460,6 +487,32 @@ func main() {
 			w.Header().Add("Access-Control-Allow-Origin", "*")
 		}
 		w.Write(productsJSON)
+	})
+
+	http.HandleFunc("/units", func(w http.ResponseWriter, r *http.Request) {
+		requestData, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+		defer r.Body.Close()
+
+		var request *ProductUnitsRequest
+		err = json.Unmarshal(requestData, &request)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		productUnits := convertStringSetToSortedSlice(productUnitsMap[request.Product])
+		productUnitsJSON, err := json.Marshal(productUnits)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		w.Header().Add("Content-Type", "application/json")
+		if isDebugMode {
+			w.Header().Add("Access-Control-Allow-Origin", "*")
+		}
+		w.Write(productUnitsJSON)
 	})
 
 	http.HandleFunc("/recipes", func(w http.ResponseWriter, r *http.Request) {
