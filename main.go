@@ -451,6 +451,9 @@ func main() {
 	var isDebugMode bool
 	flag.BoolVar(&isDebugMode, "debug", false, "enable debug mode")
 
+	var port int
+	flag.IntVar(&port, "port", 8080, "port to use for the HTTP server")
+
 	var conversionTableCSVFilename string
 	flag.StringVar(&conversionTableCSVFilename, "conversionTableCSV", "", "load a conversion table from a CSV file with the given name")
 
@@ -625,5 +628,5 @@ func main() {
 		w.Write(matchingRecipeSetResponseListJSON)
 	})
 
-	log.Fatal(http.ListenAndServe(":1337", nil))
+	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
 }
