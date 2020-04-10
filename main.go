@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -193,9 +192,15 @@ func loadProductAliasMap(filename string, productAliasMap AliasMap) {
 	}
 }
 
-func loadRecipeMetadata(reader io.Reader, recipeSources RecipeSourceMap) {
-	bufferedReader := bufio.NewReader(reader)
-	_, _, err := bufferedReader.ReadLine()
+func loadRecipeMetadata(filename string, recipeSources RecipeSourceMap) {
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	bufferedReader := bufio.NewReader(file)
+	_, _, err = bufferedReader.ReadLine()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -241,9 +246,15 @@ func convertProductUnit(unitConversionTable ConversionTable, baseConversionMap B
 	}
 }
 
-func importRecipesFromCSV(reader io.Reader, recipes RecipeTable) {
-	bufferedReader := bufio.NewReader(reader)
-	_, _, err := bufferedReader.ReadLine()
+func importRecipesFromCSV(filename string, recipes RecipeTable) {
+	file, err := os.Open(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer file.Close()
+
+	bufferedReader := bufio.NewReader(file)
+	_, _, err = bufferedReader.ReadLine()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -437,24 +448,12 @@ func main() {
 		loadProductAliasMap(productAliasMapFilename, productAliasMap)
 	}
 
-	recipeMetadataFile, err := os.Open(args[0])
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer recipeMetadataFile.Close()
-
 	recipeSources := RecipeSourceMap{}
-	loadRecipeMetadata(recipeMetadataFile, recipeSources)
+	loadRecipeMetadata(args[0], recipeSources)
 
 	recipes := RecipeTable{}
 	for _, filename := range args[1:] {
-		file, err := os.Open(filename)
-		if err != nil {
-			log.Fatal(err)
-		}
-		defer file.Close()
-
-		importRecipesFromCSV(file, recipes)
+		importRecipesFromCSV(filename, recipes)
 	}
 
 	for _, recipe := range recipes {
