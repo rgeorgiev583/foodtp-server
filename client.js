@@ -1,29 +1,29 @@
 function loadProducts() {
     function productsResponseHandler() {
-        var productsResponse = JSON.parse(this.response);
+        const productsResponse = JSON.parse(this.response);
         productsResponse.forEach(function (product) {
-            var productEntry = document.createElement("tr");
+            const productEntry = document.createElement("tr");
 
-            var productCheckbox = document.createElement("input");
+            const productCheckbox = document.createElement("input");
             productCheckbox.type = "checkbox";
             productCheckbox.id = product;
-            var productNameNode = document.createTextNode(product);
-            var productNameTableCell = document.createElement("td");
+            const productNameNode = document.createTextNode(product);
+            const productNameTableCell = document.createElement("td");
             productNameTableCell.appendChild(productCheckbox);
             productNameTableCell.appendChild(productNameNode);
             productEntry.appendChild(productNameTableCell);
 
-            var productQuantity = document.createElement("input");
+            const productQuantity = document.createElement("input");
             productQuantity.type = "text";
             productQuantity.id = product + "_quantity";
-            var productQuantityTableCell = document.createElement("td");
+            const productQuantityTableCell = document.createElement("td");
             productQuantityTableCell.appendChild(productQuantity);
             productEntry.appendChild(productQuantityTableCell);
 
-            var productUnit = document.createElement("input");
+            const productUnit = document.createElement("input");
             productUnit.type = "text";
             productUnit.id = product + "_unit";
-            var productUnitTableCell = document.createElement("td");
+            const productUnitTableCell = document.createElement("td");
             productUnitTableCell.appendChild(productUnit);
             productEntry.appendChild(productUnitTableCell);
 
@@ -31,7 +31,7 @@ function loadProducts() {
         });
     }
 
-    var productsRequest = new XMLHttpRequest();
+    const productsRequest = new XMLHttpRequest();
     productsRequest.addEventListener("load", productsResponseHandler);
     productsRequest.open("GET", "http://localhost:8080/products");
     productsRequest.send();
