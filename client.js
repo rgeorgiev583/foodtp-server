@@ -1,6 +1,14 @@
 async function loadProducts() {
+    function unitsResponseHandler(unitsResponse) {
+        unitsResponse.forEach((unit, productUnits) => {
+            const unitEntry = document.createElement("option");
+            unitEntry.value = unit;
+            productUnits.appendChild(unitEntry);
+        });
+    }
+
     function productsResponseHandler(productsResponse) {
-        productsResponse.forEach(product => {
+        productsResponse.forEach(async function product() {
             const productEntry = document.createElement("tr");
 
             const productCheckbox = document.createElement("input");
@@ -22,9 +30,24 @@ async function loadProducts() {
             const productUnit = document.createElement("input");
             productUnit.type = "text";
             productUnit.id = product + "_unit";
+            productUnit.list = product + "_units";
             const productUnitTableCell = document.createElement("td");
             productUnitTableCell.appendChild(productUnit);
             productEntry.appendChild(productUnitTableCell);
+
+            const productUnits = document.createElement("datalist");
+            productUnits.id = product + "_units";
+
+            const unitsRequestOptions = {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ "product": product }),
+            };
+            const response = await fetch("http://localhost:1337/units", unitsRequestOptions);
+            const responseObject = await response.json();
+            unitsResponseHandler(responseObject, productUnits);
 
             document.getElementById("products").appendChild(productEntry);
         });
