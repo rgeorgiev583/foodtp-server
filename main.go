@@ -213,16 +213,6 @@ func loadRecipeMetadata(reader io.Reader, recipeSources RecipeSourceMap) {
 	}
 }
 
-func getProductUnitMeasurement(unitConversionTable ConversionTable, baseConversionMap BaseConversionMap, product *Product) (productUnitMeasurement *Measurement) {
-	productUnitDefinition, ok := unitConversionTable[product.MeasurementUnit]
-	if ok {
-		productUnitMeasurement, ok = productUnitDefinition[product.Name]
-	} else {
-		productUnitMeasurement, ok = baseConversionMap[product.MeasurementUnit]
-	}
-	return
-}
-
 func convertProductUnit(unitConversionTable ConversionTable, baseConversionMap BaseConversionMap, unitAliasTable UnitAliasTable, baseUnitAliasMap AliasMap, productAliasMap AliasMap, product *Product) {
 	unitAliasDefinition, ok := unitAliasTable[product.MeasurementUnit]
 	if ok {
@@ -238,7 +228,13 @@ func convertProductUnit(unitConversionTable ConversionTable, baseConversionMap B
 	if ok {
 		product.Name = productAlias
 	}
-	productUnitMeasurement := getProductUnitMeasurement(unitConversionTable, baseConversionMap, product)
+	var productUnitMeasurement *Measurement
+	productUnitDefinition, ok := unitConversionTable[product.MeasurementUnit]
+	if ok {
+		productUnitMeasurement, ok = productUnitDefinition[product.Name]
+	} else {
+		productUnitMeasurement, ok = baseConversionMap[product.MeasurementUnit]
+	}
 	if productUnitMeasurement != nil {
 		product.MeasurementUnit = productUnitMeasurement.Unit
 		product.Quantity *= productUnitMeasurement.Quantity
