@@ -291,34 +291,18 @@ func importRecipesFromCSV(filename string, recipes RecipeTable) {
 	return
 }
 
-func uniq(slice []string) (uniqSlice []string) {
-	uniqSlice = make([]string, 0, cap(slice))
-	if len(slice) == 0 {
-		return
-	}
-
-	uniqSlice = append(uniqSlice, slice[0])
-	previousElement := slice[0]
-	for _, element := range slice {
-		if previousElement == element {
-			continue
-		}
-
-		uniqSlice = append(uniqSlice, element)
-		previousElement = element
-	}
-	return
-}
-
 func getSupportedProducts(recipes RecipeTable) (products []string) {
-	products = []string{}
+	productSet := map[string]struct{}{}
 	for _, recipe := range recipes {
 		for _, ingredient := range recipe {
-			products = append(products, ingredient.Name)
+			productSet[ingredient.Name] = struct{}{}
 		}
 	}
+	products = make([]string, 0, len(productSet))
+	for product := range productSet {
+		products = append(products, product)
+	}
 	sort.Strings(products)
-	products = uniq(products)
 	return
 }
 
