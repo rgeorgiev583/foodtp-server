@@ -1,3 +1,5 @@
+const isDebugMode = true;
+
 async function loadProducts() {
     function productsResponseHandler(productsResponse) {
         productsResponse.forEach(product => {
@@ -30,7 +32,10 @@ async function loadProducts() {
         });
     }
 
-    const productsResponse = await fetch("http://localhost:8080/products");
+    var productsRequestOptions;
+    if (isDebugMode)
+        productsRequestOptions = { mode: "cors" };
+    const productsResponse = await fetch("http://localhost:8080/products", productsRequestOptions);
     const productsResponseObject = await productsResponse.json();
     productsResponseHandler(productsResponseObject);
 }
