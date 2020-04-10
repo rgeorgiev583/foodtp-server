@@ -1,7 +1,6 @@
 function loadProducts() {
-    function productsResponseHandler() {
-        const productsResponse = JSON.parse(this.response);
-        productsResponse.forEach(function (product) {
+    function productsResponseHandler(productsResponse) {
+        productsResponse.forEach(product => {
             const productEntry = document.createElement("tr");
 
             const productCheckbox = document.createElement("input");
@@ -31,10 +30,9 @@ function loadProducts() {
         });
     }
 
-    const productsRequest = new XMLHttpRequest();
-    productsRequest.addEventListener("load", productsResponseHandler);
-    productsRequest.open("GET", "http://localhost:8080/products");
-    productsRequest.send();
+    fetch("http://localhost:8080/products")
+        .then(response => response.json())
+        .then(productsResponseHandler);
 }
 
 window.onload = loadProducts;
