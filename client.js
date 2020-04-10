@@ -1,4 +1,4 @@
-function loadProducts() {
+async function loadProducts() {
     function productsResponseHandler(productsResponse) {
         productsResponse.forEach(product => {
             const productEntry = document.createElement("tr");
@@ -30,9 +30,9 @@ function loadProducts() {
         });
     }
 
-    fetch("http://localhost:8080/products")
-        .then(response => response.json())
-        .then(productsResponseHandler);
+    const productsResponse = await fetch("http://localhost:8080/products");
+    const productsResponseObject = await productsResponse.json();
+    productsResponseHandler(productsResponseObject);
 }
 
 window.onload = loadProducts;
