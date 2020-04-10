@@ -32,6 +32,13 @@ type ConversionTable map[string]BaseConversionMap
 type AliasMap map[string]string
 type UnitAliasTable map[string]AliasMap
 
+type Density struct {
+	Quantity   float64
+	MassUnit   string
+	VolumeUnit string
+}
+type DensityMap map[string]*Density
+
 type Product struct {
 	Name            string
 	Quantity        float64 `json:"quantity"`
@@ -68,7 +75,7 @@ func convertStringSetToSortedSlice(set StringSet) (slice []string) {
 	return
 }
 
-func loadConversionTableCSV(filename string, conversionTable ConversionTable, baseConversionMap BaseConversionMap, productUnitsMap map[string]StringSet) {
+func loadConversionTableCSV(filename string, conversionTable ConversionTable, baseConversionMap BaseConversionMap, densityMap DensityMap, productUnitsMap map[string]StringSet) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -122,6 +129,9 @@ func loadConversionTableCSV(filename string, conversionTable ConversionTable, ba
 			productUnitsMap[product] = unitSet
 		}
 
+		density := &Density{}
+		densityMeasurementCount := 0
+
 		for i, measurementStr := range productRecord[1:] {
 			if measurementStr == fieldNotApplicableStr {
 				continue
@@ -143,7 +153,25 @@ func loadConversionTableCSV(filename string, conversionTable ConversionTable, ba
 
 			unitSet[culinaryUnit] = struct{}{}
 			unitSet[measurement.Unit] = struct{}{}
+
+			if density.MassUnit == "" {
+				density.MassUnit = measurement.Unit
+			}
+			if density.VolumeUnit == "" {
+				density.VolumeUnit = culinaryUnit
+			}
+
+			if density.MassUnit == measurement.Unit && density.VolumeUnit == culinaryUnit {
+				culinaryUnitBaseDefinition, ok := baseConversionMap[culinaryUnit]
+				if ok {
+					density.Quantity += measurement.Quantity / culinaryUnitBaseDefinition.Quantity
+					densityMeasurementCount++
+				}
+			}
 		}
+
+		density.Quantity /= float64(densityMeasurementCount)
+		densityMap[product] = density
 	}
 }
 
@@ -340,7 +368,7 @@ func scaleRecipesByNumberOfServings(recipes RecipeTable, numberOfServings int) {
 	}
 }
 
-func getPossibleRecipeSets(availableProducts ProductMap, recipes RecipeTable) (recipeNameMatchingSetSlicesNoSubsets [][]string) {
+func getPossibleRecipeSets(availableProducts ProductMap, recipes RecipeTable, densityMap DensityMap) (recipeNameMatchingSetSlicesNoSubsets [][]string) {
 	recipeNameSet := set.NewSet()
 	for recipeName := range recipes {
 		recipeNameSet.Add(recipeName)
@@ -372,8 +400,19 @@ func getPossibleRecipeSets(availableProducts ProductMap, recipes RecipeTable) (r
 					if remainingProduct.MeasurementUnit == ingredient.MeasurementUnit {
 						remainingProduct.Quantity -= ingredient.Quantity
 					} else {
-						log.Printf(`measurement units "%s" (from product list) and "%s" (from recipe) are incomparable`, remainingProduct.MeasurementUnit, ingredient.MeasurementUnit)
-						continue
+						productDensity, ok := densityMap[ingredient.Name]
+						if ok {
+							var convertedIngredientQuantity float64
+							if ingredient.MeasurementUnit == productDensity.VolumeUnit && remainingProduct.MeasurementUnit == productDensity.MassUnit {
+								convertedIngredientQuantity = ingredient.Quantity * productDensity.Quantity
+							} else if ingredient.MeasurementUnit == productDensity.MassUnit && remainingProduct.MeasurementUnit == productDensity.VolumeUnit {
+								convertedIngredientQuantity = ingredient.Quantity / productDensity.Quantity
+							}
+							remainingProduct.Quantity -= convertedIngredientQuantity
+						} else {
+							log.Printf(`measurement units "%s" (from product list) and "%s" (from recipe) are incomparable`, remainingProduct.MeasurementUnit, ingredient.MeasurementUnit)
+							continue
+						}
 					}
 
 					if remainingProduct.Quantity < 0 {
@@ -442,12 +481,13 @@ func main() {
 
 	unitConversionTable := ConversionTable{}
 	baseConversionMap := BaseConversionMap{}
+	densityMap := DensityMap{}
 	productUnitsMap := map[string]StringSet{}
 	unitAliasTable := UnitAliasTable{}
 	baseUnitAliasMap := AliasMap{}
 	productAliasMap := AliasMap{}
 	if conversionTableCSVFilename != "" {
-		loadConversionTableCSV(conversionTableCSVFilename, unitConversionTable, baseConversionMap, productUnitsMap)
+		loadConversionTableCSV(conversionTableCSVFilename, unitConversionTable, baseConversionMap, densityMap, productUnitsMap)
 	}
 	if conversionTableINIFilename != "" {
 		loadConversionTableINI(conversionTableINIFilename, unitConversionTable, baseConversionMap, productUnitsMap)
@@ -544,7 +584,7 @@ func main() {
 			scaleRecipesByNumberOfServings(recipes, request.NumberOfServings)
 		}
 
-		possibleRecipeSets := getPossibleRecipeSets(request.AvailableProducts, recipes)
+		possibleRecipeSets := getPossibleRecipeSets(request.AvailableProducts, recipes, densityMap)
 		for _, recipeNameSubsetSlice := range possibleRecipeSets {
 			fmt.Println(strings.Join(recipeNameSubsetSlice, ", "))
 		}
