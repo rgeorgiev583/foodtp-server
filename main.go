@@ -368,7 +368,7 @@ func scaleRecipesByNumberOfServings(recipes RecipeTable, numberOfServings int) {
 	}
 }
 
-func getMatchingRecipeSets(availableProducts ProductMap, recipeNamePowerSet set.Set, recipes RecipeTable, densityMap DensityMap) (recipeNameMatchingSetSlicesNoSubsets [][]string) {
+func getMatchingRecipeNameSets(availableProducts ProductMap, recipeNamePowerSet set.Set, recipes RecipeTable, densityMap DensityMap) (recipeNameMatchingSetSlicesNoSubsets [][]string) {
 	recipeNameMatchingSets := []set.Set{}
 
 	for recipeNameSubsetInterface := range recipeNamePowerSet.Iter() {
@@ -597,30 +597,30 @@ func main() {
 			scaleRecipesByNumberOfServings(recipes, request.NumberOfServings)
 		}
 
-		possibleRecipeSets := getMatchingRecipeSets(request.AvailableProducts, recipeNamePowerSet, recipes, densityMap)
-		for _, recipeNameSubsetSlice := range possibleRecipeSets {
-			fmt.Println(strings.Join(recipeNameSubsetSlice, ", "))
+		matchingRecipeNameSets := getMatchingRecipeNameSets(request.AvailableProducts, recipeNamePowerSet, recipes, densityMap)
+		for _, matchingRecipeNameSet := range matchingRecipeNameSets {
+			fmt.Println(strings.Join(matchingRecipeNameSet, ", "))
 		}
 
-		possibleRecipeResponseSets := [][]*RecipeSuggestionResponse{}
-		for _, possibleRecipeSet := range possibleRecipeSets {
-			possibleRecipeResponseSet := []*RecipeSuggestionResponse{}
-			for _, possibleRecipe := range possibleRecipeSet {
-				recipeSource, ok := recipeSources[possibleRecipe]
+		matchingRecipeSetResponseList := [][]*RecipeSuggestionResponse{}
+		for _, matchingRecipeNameSet := range matchingRecipeNameSets {
+			matchingRecipeSetResponse := []*RecipeSuggestionResponse{}
+			for _, matchingRecipeName := range matchingRecipeNameSet {
+				matchingRecipeSource, ok := recipeSources[matchingRecipeName]
 				if !ok {
 					log.Fatal("recipe not found")
 				}
 
-				possibleRecipeResponse := &RecipeSuggestionResponse{
-					Name:   possibleRecipe,
-					Source: recipeSource,
+				matchingRecipeResponse := &RecipeSuggestionResponse{
+					Name:   matchingRecipeName,
+					Source: matchingRecipeSource,
 				}
-				possibleRecipeResponseSet = append(possibleRecipeResponseSet, possibleRecipeResponse)
+				matchingRecipeSetResponse = append(matchingRecipeSetResponse, matchingRecipeResponse)
 			}
-			possibleRecipeResponseSets = append(possibleRecipeResponseSets, possibleRecipeResponseSet)
+			matchingRecipeSetResponseList = append(matchingRecipeSetResponseList, matchingRecipeSetResponse)
 		}
 
-		possibleRecipeResponseSetsJSON, err := json.Marshal(possibleRecipeResponseSets)
+		matchingRecipeSetResponseListJSON, err := json.Marshal(matchingRecipeSetResponseList)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -629,7 +629,7 @@ func main() {
 		if isDebugMode {
 			w.Header().Add("Access-Control-Allow-Origin", "*")
 		}
-		w.Write(possibleRecipeResponseSetsJSON)
+		w.Write(matchingRecipeSetResponseListJSON)
 	})
 
 	log.Fatal(http.ListenAndServe(":8080", nil))
