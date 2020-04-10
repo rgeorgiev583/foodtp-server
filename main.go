@@ -125,7 +125,7 @@ func loadConversionTableCSV(filename string, conversionTable ConversionTable, ba
 
 		unitSet, ok := productUnitsMap[product]
 		if !ok {
-			unitSet = StringSet{}
+			unitSet = make(StringSet, len(productRecords[1:]))
 			productUnitsMap[product] = unitSet
 		}
 
@@ -146,7 +146,7 @@ func loadConversionTableCSV(filename string, conversionTable ConversionTable, ba
 			culinaryUnit := culinaryUnits[i]
 			unitDefinition, ok := conversionTable[culinaryUnit]
 			if !ok {
-				unitDefinition = BaseConversionMap{}
+				unitDefinition = make(BaseConversionMap, culinaryUnitCount)
 				conversionTable[culinaryUnit] = unitDefinition
 			}
 			unitDefinition[product] = measurement
@@ -198,18 +198,20 @@ func loadConversionTableINI(filename string, conversionTable ConversionTable, ba
 		baseConversionMap[key.Name()] = getMeasurement(key.Value())
 	}
 
-	for _, section := range file.Sections() {
+	sections := file.Sections()
+	for _, section := range sections {
 		unit := section.Name()
-		unitDefinition := BaseConversionMap{}
+		keys := section.Keys()
+		unitDefinition := make(BaseConversionMap, len(keys))
 
-		for _, key := range section.Keys() {
+		for _, key := range keys {
 			product := key.Name()
 			measurement := getMeasurement(key.Value())
 			unitDefinition[product] = measurement
 
 			unitSet, ok := productUnitsMap[product]
 			if !ok {
-				unitSet = StringSet{}
+				unitSet = make(StringSet, len(sections))
 				productUnitsMap[product] = unitSet
 			}
 			unitSet[unit] = struct{}{}
@@ -235,9 +237,10 @@ func loadUnitAliasTable(filename string, unitAliasTable UnitAliasTable, baseUnit
 	}
 
 	for _, section := range file.Sections() {
-		unitAliasDefinition := AliasMap{}
+		keys := section.Keys()
+		unitAliasDefinition := make(AliasMap, len(keys))
 
-		for _, key := range section.Keys() {
+		for _, key := range keys {
 			unitAliasDefinition[key.Name()] = key.Value()
 		}
 
@@ -373,7 +376,7 @@ func getMatchingRecipeNameSets(availableProducts ProductMap, recipeNamePowerSet 
 
 	for recipeNameSubsetInterface := range recipeNamePowerSet.Iter() {
 		func() {
-			remainingProducts := ProductMap{}
+			remainingProducts := make(ProductMap, len(availableProducts))
 			for productName, product := range availableProducts {
 				productCopy := *product
 				remainingProducts[productName] = &productCopy
@@ -423,7 +426,7 @@ func getMatchingRecipeNameSets(availableProducts ProductMap, recipeNamePowerSet 
 		}()
 	}
 
-	recipeNameMatchingSetsNoSubsets := []set.Set{}
+	recipeNameMatchingSetsNoSubsets := make([]set.Set, 0, len(recipeNameMatchingSets))
 	for _, recipeNameLHSSubset := range recipeNameMatchingSets {
 		isSubset := false
 		for _, recipeNameRHSSubset := range recipeNameMatchingSets {
@@ -437,9 +440,9 @@ func getMatchingRecipeNameSets(availableProducts ProductMap, recipeNamePowerSet 
 		}
 	}
 
-	recipeNameMatchingSetSlicesNoSubsets = [][]string{}
+	recipeNameMatchingSetSlicesNoSubsets = make([][]string, 0, len(recipeNameMatchingSetsNoSubsets))
 	for _, recipeNameSubset := range recipeNameMatchingSetsNoSubsets {
-		recipeNameSubsetSlice := []string{}
+		recipeNameSubsetSlice := make([]string, 0, recipeNameSubset.Cardinality())
 		for recipeNameInterface := range recipeNameSubset.Iter() {
 			recipeName := recipeNameInterface.(string)
 			recipeNameSubsetSlice = append(recipeNameSubsetSlice, recipeName)
@@ -508,7 +511,7 @@ func main() {
 	recipeSources := RecipeSourceMap{}
 	loadRecipeMetadata(args[0], recipeSources)
 
-	recipes := RecipeTable{}
+	recipes := make(RecipeTable, len(recipeSources))
 	productSet := StringSet{}
 	for _, filename := range args[1:] {
 		importRecipesFromCSV(filename, recipes, productSet)
@@ -602,9 +605,9 @@ func main() {
 			fmt.Println(strings.Join(matchingRecipeNameSet, ", "))
 		}
 
-		matchingRecipeSetResponseList := [][]*RecipeSuggestionResponse{}
+		matchingRecipeSetResponseList := make([][]*RecipeSuggestionResponse, 0, len(matchingRecipeNameSets))
 		for _, matchingRecipeNameSet := range matchingRecipeNameSets {
-			matchingRecipeSetResponse := []*RecipeSuggestionResponse{}
+			matchingRecipeSetResponse := make([]*RecipeSuggestionResponse, 0, len(matchingRecipeNameSet))
 			for _, matchingRecipeName := range matchingRecipeNameSet {
 				matchingRecipeSource, ok := recipeSources[matchingRecipeName]
 				if !ok {
