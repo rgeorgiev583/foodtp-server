@@ -8,7 +8,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
+	"net/http/fcgi"
 	"os"
 	"regexp"
 	"sort"
@@ -640,9 +642,11 @@ func main() {
 		w.Write(matchingRecipeSetResponseListJSON)
 	})
 
-	if tlsCertFile != "" && tlsKeyFile != "" {
-		log.Fatal(http.ListenAndServeTLS(fmt.Sprintf(":%v", port), tlsCertFile, tlsKeyFile, nil))
-	} else {
-		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
+	listener, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
+	if err != nil {
+		log.Fatal(err)
 	}
+
+	log.Print("accepted connection; starting to serve...")
+	log.Fatal(fcgi.Serve(listener, nil))
 }

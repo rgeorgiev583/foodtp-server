@@ -45,7 +45,7 @@ async function loadProducts() {
                 },
                 body: JSON.stringify({ "product": product }),
             };
-            const response = await fetch("http://foodeta.com:1337/units", unitsRequestOptions);
+            const response = await fetch("/units", unitsRequestOptions);
             const responseObject = await response.json();
             unitsResponseHandler(responseObject, productUnits);
 
@@ -53,7 +53,7 @@ async function loadProducts() {
         });
     }
 
-    const productsResponse = await fetch("http://foodeta.com:1337/products", { mode: "no-cors" });
+    const productsResponse = await fetch("/products");
     const productsResponseObject = await productsResponse.json();
     productsResponseHandler(productsResponseObject);
 }
