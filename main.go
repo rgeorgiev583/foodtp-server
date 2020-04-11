@@ -460,6 +460,12 @@ func main() {
 	var tlsKeyFile string
 	flag.StringVar(&tlsKeyFile, "tlsKeyFile", "", "TLS key file to use for HTTPS")
 
+	var httpOrigin string
+	flag.StringVar(&httpOrigin, "httpOrigin", "https://localhost", "HTTP origin to use with the Access-Control-Allow-Origin response header")
+	if isDebugMode {
+		httpOrigin = "*"
+	}
+
 	var conversionTableCSVFilename string
 	flag.StringVar(&conversionTableCSVFilename, "conversionTableCSV", "", "load a conversion table from a CSV file with the given name")
 
@@ -545,9 +551,7 @@ func main() {
 		}
 
 		w.Header().Add("Content-Type", "application/json")
-		if isDebugMode {
-			w.Header().Add("Access-Control-Allow-Origin", "*")
-		}
+		w.Header().Add("Access-Control-Allow-Origin", httpOrigin)
 		w.Write(productsJSON)
 	})
 
@@ -571,9 +575,7 @@ func main() {
 		}
 
 		w.Header().Add("Content-Type", "application/json")
-		if isDebugMode {
-			w.Header().Add("Access-Control-Allow-Origin", "*")
-		}
+		w.Header().Add("Access-Control-Allow-Origin", httpOrigin)
 		w.Write(productUnitsJSON)
 	})
 
@@ -628,9 +630,7 @@ func main() {
 		}
 
 		w.Header().Add("Content-Type", "application/json")
-		if isDebugMode {
-			w.Header().Add("Access-Control-Allow-Origin", "*")
-		}
+		w.Header().Add("Access-Control-Allow-Origin", httpOrigin)
 		w.Write(matchingRecipeSetResponseListJSON)
 	})
 
