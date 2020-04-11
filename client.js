@@ -53,7 +53,7 @@ async function loadProducts() {
         });
     }
 
-    const productsResponse = await fetch("http://foodeta.com:1337/products");
+    const productsResponse = await fetch("http://foodeta.com:1337/products", { mode: "no-cors" });
     const productsResponseObject = await productsResponse.json();
     productsResponseHandler(productsResponseObject);
 }
