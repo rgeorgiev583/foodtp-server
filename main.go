@@ -454,6 +454,12 @@ func main() {
 	var port int
 	flag.IntVar(&port, "port", 8080, "port to use for the HTTP server")
 
+	var tlsCertFile string
+	flag.StringVar(&tlsCertFile, "tlsCertFile", "", "TLS certificate file to use for HTTPS")
+
+	var tlsKeyFile string
+	flag.StringVar(&tlsKeyFile, "tlsKeyFile", "", "TLS key file to use for HTTPS")
+
 	var conversionTableCSVFilename string
 	flag.StringVar(&conversionTableCSVFilename, "conversionTableCSV", "", "load a conversion table from a CSV file with the given name")
 
@@ -628,5 +634,9 @@ func main() {
 		w.Write(matchingRecipeSetResponseListJSON)
 	})
 
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
+	if tlsCertFile != "" && tlsKeyFile != "" {
+		log.Fatal(http.ListenAndServeTLS(fmt.Sprintf(":%v", port), tlsCertFile, tlsKeyFile, nil))
+	} else {
+		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%v", port), nil))
+	}
 }
