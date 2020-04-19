@@ -537,7 +537,7 @@ func main() {
 		}
 	}
 
-	recipeNameSet := set.NewSet()
+	recipeNameSet := set.NewThreadUnsafeSet()
 	for recipeName := range recipes {
 		recipeNameSet.Add(recipeName)
 	}
