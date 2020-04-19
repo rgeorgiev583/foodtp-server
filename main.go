@@ -90,10 +90,10 @@ func importUnitConversionTableFromCSV(filename string, unitConversionTable Conve
 
 	unitDescriptions := productRecords[0][1:]
 	unitCount := len(unitDescriptions)
-	units := make([]string, unitCount, unitCount)
+	units := make([]string, 0, unitCount)
 
 	unitDescriptionPattern := regexp.MustCompile(`(.+?)\s*\((\d+)\s*(.+)\)`)
-	for i, unitDescription := range unitDescriptions {
+	for _, unitDescription := range unitDescriptions {
 		unitDescriptionMatch := unitDescriptionPattern.FindStringSubmatch(unitDescription)
 		if len(unitDescriptionMatch) != 4 {
 			log.Print("error: invalid format of culinary unit description")
@@ -104,7 +104,7 @@ func importUnitConversionTableFromCSV(filename string, unitConversionTable Conve
 		}
 
 		unit := unitDescriptionMatch[1]
-		units[i] = unit
+		units = append(units, unit)
 
 		unitQuantityStr := unitDescriptionMatch[2]
 		var baseUnitQuantity float64
