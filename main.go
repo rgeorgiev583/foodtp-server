@@ -47,7 +47,6 @@ type Product struct {
 
 type ProductMap map[string]*Product
 type RecipeTable map[string]ProductMap
-type RecipeSourceMap map[string]string
 
 type ProductUnitsRequest struct {
 	Product string `json:"product"`
@@ -263,7 +262,7 @@ func importProductAliasMapFromINI(filename string, productAliasMap BaseAliasMap)
 	}
 }
 
-func importRecipeMetadataFromCSV(filename string, recipeSources RecipeSourceMap) {
+func importRecipeMetadataFromCSV(filename string, recipeSources map[string]string) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -517,7 +516,7 @@ func main() {
 		}
 	}
 
-	recipeSources := RecipeSourceMap{}
+	recipeSources := map[string]string{}
 	importRecipeMetadataFromCSV(args[0], recipeSources)
 
 	recipes := make(RecipeTable, len(recipeSources))
