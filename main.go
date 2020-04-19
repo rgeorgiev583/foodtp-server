@@ -64,6 +64,7 @@ type RecipeSuggestionsResponse struct {
 
 const iniDefaultSectionName = "DEFAULT"
 const fieldNotApplicableStr = "-"
+const toTasteUnitName = "to taste"
 
 func convertStringSetToSortedSlice(set StringSet) (slice []string) {
 	slice = make([]string, 0, len(set))
@@ -382,7 +383,7 @@ func getMatchingRecipeNameSets(availableProducts ProductMap, recipeNamePowerSet 
 						return
 					}
 
-					if ingredient.MeasurementUnit == "на вкус" {
+					if ingredient.MeasurementUnit == toTasteUnitName {
 						continue
 					}
 
