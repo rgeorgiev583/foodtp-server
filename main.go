@@ -23,8 +23,8 @@ import (
 type StringSet map[string]struct{}
 
 type Measurement struct {
-	Quantity float64
-	Unit     string
+	Quantity float64 `json:"quantity"`
+	Unit     string  `json:"unit"`
 }
 
 type BaseUnitConversionMap map[string]*Measurement
@@ -40,9 +40,8 @@ type Density struct {
 type DensityMap map[string]*Density
 
 type Product struct {
-	Name            string
-	Quantity        float64 `json:"quantity"`
-	MeasurementUnit string  `json:"measurementUnit"`
+	Name string
+	*Measurement
 }
 
 type ProductMap map[string]*Product
@@ -290,14 +289,14 @@ func importRecipeMetadataFromCSV(filename string, recipeSources map[string]strin
 }
 
 func convertProductUnit(unitConversionTable UnitConversionTable, baseUnitConversionMap BaseUnitConversionMap, unitAliasTable AliasTable, baseUnitAliasMap BaseAliasMap, productAliasMap BaseAliasMap, product *Product) {
-	unitAliasDefinition, ok := unitAliasTable[product.MeasurementUnit]
+	unitAliasDefinition, ok := unitAliasTable[product.Measurement.Unit]
 	if ok {
 		unitAlias, ok := unitAliasDefinition[product.Name]
 		if !ok {
-			unitAlias, ok = baseUnitAliasMap[product.MeasurementUnit]
+			unitAlias, ok = baseUnitAliasMap[product.Measurement.Unit]
 		}
 		if ok {
-			product.MeasurementUnit = unitAlias
+			product.Measurement.Unit = unitAlias
 		}
 	}
 	productAlias, ok := productAliasMap[product.Name]
@@ -305,14 +304,14 @@ func convertProductUnit(unitConversionTable UnitConversionTable, baseUnitConvers
 		product.Name = productAlias
 	}
 	var productUnitMeasurement *Measurement
-	productUnitDefinition, ok := unitConversionTable[product.MeasurementUnit]
+	productUnitDefinition, ok := unitConversionTable[product.Measurement.Unit]
 	if ok {
 		productUnitMeasurement, ok = productUnitDefinition[product.Name]
 	} else {
-		productUnitMeasurement, ok = baseUnitConversionMap[product.MeasurementUnit]
+		productUnitMeasurement, ok = baseUnitConversionMap[product.Measurement.Unit]
 	}
 	if productUnitMeasurement != nil {
-		product.MeasurementUnit = productUnitMeasurement.Unit
+		product.Measurement.Unit = productUnitMeasurement.Unit
 		product.Quantity *= productUnitMeasurement.Quantity
 	}
 }
@@ -353,9 +352,11 @@ func importRecipeIngredientsFromCSV(filename string, recipes RecipeTable, produc
 		}
 
 		recipe[ingredientRecord[0]] = &Product{
-			Name:            ingredientRecord[0],
-			Quantity:        ingredientQuantity,
-			MeasurementUnit: ingredientRecord[2],
+			Name: ingredientRecord[0],
+			Measurement: &Measurement{
+				Quantity: ingredientQuantity,
+				Unit:     ingredientRecord[2],
+			},
 		}
 		products[ingredientRecord[0]] = struct{}{}
 	}
@@ -383,25 +384,25 @@ func getMatchingRecipeNameSets(availableProducts ProductMap, recipeNamePowerSet 
 						return
 					}
 
-					if ingredient.MeasurementUnit == toTasteUnitName {
+					if ingredient.Measurement.Unit == toTasteUnitName {
 						continue
 					}
 
 					convertedIngredientQuantity := ingredient.Quantity * float64(numberOfServings)
-					if remainingProduct.MeasurementUnit != ingredient.MeasurementUnit {
+					if remainingProduct.Measurement.Unit != ingredient.Measurement.Unit {
 						productDensity, ok := productDensityMap[ingredient.Name]
 						areUnitsIncomparable := false
 						if ok {
-							if ingredient.MeasurementUnit == productDensity.VolumeUnit && remainingProduct.MeasurementUnit == productDensity.MassUnit {
+							if ingredient.Measurement.Unit == productDensity.VolumeUnit && remainingProduct.Measurement.Unit == productDensity.MassUnit {
 								convertedIngredientQuantity *= productDensity.Quantity
-							} else if ingredient.MeasurementUnit == productDensity.MassUnit && remainingProduct.MeasurementUnit == productDensity.VolumeUnit {
+							} else if ingredient.Measurement.Unit == productDensity.MassUnit && remainingProduct.Measurement.Unit == productDensity.VolumeUnit {
 								convertedIngredientQuantity /= productDensity.Quantity
 							} else {
 								areUnitsIncomparable = true
 							}
 						}
 						if !ok || areUnitsIncomparable {
-							log.Printf(`measurement units "%s" (from product list) and "%s" (from recipe) are incomparable`, remainingProduct.MeasurementUnit, ingredient.MeasurementUnit)
+							log.Printf(`measurement units "%s" (from product list) and "%s" (from recipe) are incomparable`, remainingProduct.Measurement.Unit, ingredient.Measurement.Unit)
 							return
 						}
 					}
