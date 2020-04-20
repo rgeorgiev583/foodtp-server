@@ -363,7 +363,7 @@ func importRecipeIngredientsFromCSV(filename string, recipes RecipeTable, produc
 	return
 }
 
-func getMatchingRecipeNameSets(availableProducts ProductMap, recipeNamePowerSet set.Set, recipes RecipeTable, productDensityMap DensityMap, numberOfServings int) (recipeNameMatchingSetSlicesNoSubsets [][]string) {
+func getMatchingRecipeNameSets(availableProducts ProductMap, recipeNamePowerSet set.Set, recipes RecipeTable, productDensityMap DensityMap, numberOfServings int) (recipeNameMatchingSetsNoSubsets [][]string) {
 	recipeNameMatchingSets := []set.Set{}
 
 	for recipeNameSubsetInterface := range recipeNamePowerSet.Iter() {
@@ -420,7 +420,7 @@ func getMatchingRecipeNameSets(availableProducts ProductMap, recipeNamePowerSet 
 		}()
 	}
 
-	recipeNameMatchingSetsNoSubsets := make([]set.Set, 0, len(recipeNameMatchingSets))
+	recipeNameMatchingSetsNoSubsets = make([][]string, 0, len(recipeNameMatchingSets))
 	for _, recipeNameLHSSubset := range recipeNameMatchingSets {
 		isSubset := false
 		for _, recipeNameRHSSubset := range recipeNameMatchingSets {
@@ -430,18 +430,13 @@ func getMatchingRecipeNameSets(availableProducts ProductMap, recipeNamePowerSet 
 			}
 		}
 		if !isSubset {
-			recipeNameMatchingSetsNoSubsets = append(recipeNameMatchingSetsNoSubsets, recipeNameLHSSubset)
+			recipeNameSubsetSlice := make([]string, 0, recipeNameLHSSubset.Cardinality())
+			for recipeNameInterface := range recipeNameLHSSubset.Iter() {
+				recipeName := recipeNameInterface.(string)
+				recipeNameSubsetSlice = append(recipeNameSubsetSlice, recipeName)
+			}
+			recipeNameMatchingSetsNoSubsets = append(recipeNameMatchingSetsNoSubsets, recipeNameSubsetSlice)
 		}
-	}
-
-	recipeNameMatchingSetSlicesNoSubsets = make([][]string, 0, len(recipeNameMatchingSetsNoSubsets))
-	for _, recipeNameSubset := range recipeNameMatchingSetsNoSubsets {
-		recipeNameSubsetSlice := make([]string, 0, recipeNameSubset.Cardinality())
-		for recipeNameInterface := range recipeNameSubset.Iter() {
-			recipeName := recipeNameInterface.(string)
-			recipeNameSubsetSlice = append(recipeNameSubsetSlice, recipeName)
-		}
-		recipeNameMatchingSetSlicesNoSubsets = append(recipeNameMatchingSetSlicesNoSubsets, recipeNameSubsetSlice)
 	}
 
 	return
