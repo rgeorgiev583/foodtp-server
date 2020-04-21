@@ -47,7 +47,7 @@ type Density struct {
 	MassUnit   string
 	VolumeUnit string
 }
-type DensityMap map[string]*Density
+type ProductDensityMap map[string]*Density
 
 type Product struct {
 	Name string
@@ -85,21 +85,21 @@ func (s StringSet) Sorted() (sorted []string) {
 	return
 }
 
-func newUnitConversionContext() *UnitConversionContext {
+func NewUnitConversionContext() *UnitConversionContext {
 	return &UnitConversionContext{
 		UnitConversionTable{},
 		BaseUnitConversionMap{},
 	}
 }
 
-func newUnitAliasContext() *UnitAliasContext {
+func NewUnitAliasContext() *UnitAliasContext {
 	return &UnitAliasContext{
 		AliasTable{},
 		BaseAliasMap{},
 	}
 }
 
-func (ctx *UnitConversionContext) ImportFromCSV(filename string, productDensityMap DensityMap, productUnitsMap map[string]StringSet) {
+func (ctx *UnitConversionContext) ImportFromCSVFile(filename string, productDensityMap ProductDensityMap, productUnitsMap map[string]StringSet) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -186,9 +186,9 @@ func (ctx *UnitConversionContext) ImportFromCSV(filename string, productDensityM
 			}
 
 			if productDensity.MassUnit == productDensityMeasurement.Unit && productDensity.VolumeUnit == unit {
-				culinaryUnitBaseDefinition, ok := ctx.BaseUnitConversionMap[unit]
+				unitBaseDefinition, ok := ctx.BaseUnitConversionMap[unit]
 				if ok {
-					productDensity.Quantity += productDensityMeasurement.Quantity / culinaryUnitBaseDefinition.Quantity
+					productDensity.Quantity += productDensityMeasurement.Quantity / unitBaseDefinition.Quantity
 					productDensityMeasurementCount++
 				}
 			}
@@ -199,16 +199,16 @@ func (ctx *UnitConversionContext) ImportFromCSV(filename string, productDensityM
 	}
 }
 
-func getMeasurement(measurementStr string) (measurement *Measurement) {
-	measurement = &Measurement{}
-	_, err := fmt.Sscanln(measurementStr, &measurement.Quantity, &measurement.Unit)
+func getMeasurement(str string) (m *Measurement) {
+	m = &Measurement{}
+	_, err := fmt.Sscanln(str, &m.Quantity, &m.Unit)
 	if err != nil {
 		log.Fatal(err)
 	}
 	return
 }
 
-func (ctx *UnitConversionContext) ImportFromINI(filename string, productUnitsMap map[string]StringSet) {
+func (ctx *UnitConversionContext) ImportFromINIFile(filename string, productUnitsMap map[string]StringSet) {
 	file, err := ini.Load(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -222,10 +222,10 @@ func (ctx *UnitConversionContext) ImportFromINI(filename string, productUnitsMap
 		ctx.BaseUnitConversionMap[baseUnitDefinition.Name()] = getMeasurement(baseUnitDefinition.Value())
 	}
 
-	sections := file.Sections()
-	for _, section := range sections {
-		unit := section.Name()
-		keys := section.Keys()
+	unitSections := file.Sections()
+	for _, unitSection := range unitSections {
+		unit := unitSection.Name()
+		keys := unitSection.Keys()
 		unitDefinition := make(BaseUnitConversionMap, len(keys))
 
 		for _, key := range keys {
@@ -235,7 +235,7 @@ func (ctx *UnitConversionContext) ImportFromINI(filename string, productUnitsMap
 
 			unitSet, ok := productUnitsMap[product]
 			if !ok {
-				unitSet = make(StringSet, len(sections))
+				unitSet = make(StringSet, len(unitSections))
 				productUnitsMap[product] = unitSet
 			}
 			unitSet[unit] = struct{}{}
@@ -246,33 +246,33 @@ func (ctx *UnitConversionContext) ImportFromINI(filename string, productUnitsMap
 	}
 }
 
-func (ctx *UnitAliasContext) ImportFromINI(filename string) {
+func (ctx *UnitAliasContext) ImportFromINIFile(filename string) {
 	file, err := ini.Load(filename)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	baseUnitDefinitions, err := file.GetSection(iniDefaultSectionName)
+	baseAliasDefinitions, err := file.GetSection(iniDefaultSectionName)
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, baseUnitDefinition := range baseUnitDefinitions.Keys() {
-		ctx.BaseAliasMap[baseUnitDefinition.Name()] = baseUnitDefinition.Value()
+	for _, baseAliasDefinition := range baseAliasDefinitions.Keys() {
+		ctx.BaseAliasMap[baseAliasDefinition.Name()] = baseAliasDefinition.Value()
 	}
 
-	for _, section := range file.Sections() {
-		keys := section.Keys()
-		unitAliasDefinition := make(BaseAliasMap, len(keys))
+	for _, unitSection := range file.Sections() {
+		aliasDefinitions := unitSection.Keys()
+		aliasMap := make(BaseAliasMap, len(aliasDefinitions))
 
-		for _, key := range keys {
-			unitAliasDefinition[key.Name()] = key.Value()
+		for _, aliasDefinition := range aliasDefinitions {
+			aliasMap[aliasDefinition.Name()] = aliasDefinition.Value()
 		}
 
-		ctx.AliasTable[section.Name()] = unitAliasDefinition
+		ctx.AliasTable[unitSection.Name()] = aliasMap
 	}
 }
 
-func (m BaseAliasMap) ImportFromINI(filename string) {
+func (m BaseAliasMap) ImportFromINIFile(filename string) {
 	file, err := ini.Load(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -282,12 +282,12 @@ func (m BaseAliasMap) ImportFromINI(filename string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, key := range section.Keys() {
-		m[key.Name()] = key.Value()
+	for _, aliasDefinition := range section.Keys() {
+		m[aliasDefinition.Name()] = aliasDefinition.Value()
 	}
 }
 
-func (m RecipeSourceMap) ImportFromCSV(filename string) {
+func (m RecipeSourceMap) ImportFromCSVFile(filename string) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -341,7 +341,7 @@ func (p *Product) ConvertUnit(unitConversionContext *UnitConversionContext, unit
 	}
 }
 
-func (t RecipeTable) ImportFromCSV(filename string, products StringSet) {
+func (t RecipeTable) ImportFromCSVFile(filename string, products StringSet) {
 	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatal(err)
@@ -389,8 +389,8 @@ func (t RecipeTable) ImportFromCSV(filename string, products StringSet) {
 	return
 }
 
-func (t RecipeTable) GetMatchingRecipeNameSets(availableProducts ProductMap, recipeNamePowerSet set.Set, productDensityMap DensityMap, numberOfServings int) (recipeNameMatchingSetsNoSubsets [][]string) {
-	recipeNameMatchingSets := []set.Set{}
+func (t RecipeTable) GetMatchingRecipeNameSets(availableProducts ProductMap, recipeNamePowerSet set.Set, productDensityMap ProductDensityMap, numberOfServings int) (matchingRecipeNameSets [][]string) {
+	matchingRecipeNameSetsWithSubsets := []set.Set{}
 
 	for recipeNameSubsetInterface := range recipeNamePowerSet.Iter() {
 		func() {
@@ -441,15 +441,15 @@ func (t RecipeTable) GetMatchingRecipeNameSets(availableProducts ProductMap, rec
 			}
 
 			if recipeNameSubset.Cardinality() > 0 {
-				recipeNameMatchingSets = append(recipeNameMatchingSets, recipeNameSubset)
+				matchingRecipeNameSetsWithSubsets = append(matchingRecipeNameSetsWithSubsets, recipeNameSubset)
 			}
 		}()
 	}
 
-	recipeNameMatchingSetsNoSubsets = make([][]string, 0, len(recipeNameMatchingSets))
-	for _, recipeNameLHSSubset := range recipeNameMatchingSets {
+	matchingRecipeNameSets = make([][]string, 0, len(matchingRecipeNameSetsWithSubsets))
+	for _, recipeNameLHSSubset := range matchingRecipeNameSetsWithSubsets {
 		isSubset := false
-		for _, recipeNameRHSSubset := range recipeNameMatchingSets {
+		for _, recipeNameRHSSubset := range matchingRecipeNameSetsWithSubsets {
 			if recipeNameLHSSubset != recipeNameRHSSubset && recipeNameLHSSubset.IsSubset(recipeNameRHSSubset) {
 				isSubset = true
 				break
@@ -461,7 +461,7 @@ func (t RecipeTable) GetMatchingRecipeNameSets(availableProducts ProductMap, rec
 				recipeName := recipeNameInterface.(string)
 				recipeNameSubsetSlice = append(recipeNameSubsetSlice, recipeName)
 			}
-			recipeNameMatchingSetsNoSubsets = append(recipeNameMatchingSetsNoSubsets, recipeNameSubsetSlice)
+			matchingRecipeNameSets = append(matchingRecipeNameSets, recipeNameSubsetSlice)
 		}
 	}
 
@@ -507,22 +507,22 @@ func main() {
 		os.Exit(1)
 	}
 
-	unitConversionContext := newUnitConversionContext()
-	productDensityMap := DensityMap{}
+	unitConversionContext := NewUnitConversionContext()
+	productDensityMap := ProductDensityMap{}
 	productUnitsMap := map[string]StringSet{}
-	unitAliasContext := newUnitAliasContext()
+	unitAliasContext := NewUnitAliasContext()
 	productAliasMap := BaseAliasMap{}
 	if unitConversionTableCSVFilename != "" {
-		unitConversionContext.ImportFromCSV(unitConversionTableCSVFilename, productDensityMap, productUnitsMap)
+		unitConversionContext.ImportFromCSVFile(unitConversionTableCSVFilename, productDensityMap, productUnitsMap)
 	}
 	if unitConversionTableINIFilename != "" {
-		unitConversionContext.ImportFromINI(unitConversionTableINIFilename, productUnitsMap)
+		unitConversionContext.ImportFromINIFile(unitConversionTableINIFilename, productUnitsMap)
 	}
 	if unitAliasTableFilename != "" {
-		unitAliasContext.ImportFromINI(unitAliasTableFilename)
+		unitAliasContext.ImportFromINIFile(unitAliasTableFilename)
 	}
 	if productAliasMapFilename != "" {
-		productAliasMap.ImportFromINI(productAliasMapFilename)
+		productAliasMap.ImportFromINIFile(productAliasMapFilename)
 	}
 
 	for _, unitDefinition := range unitConversionContext.UnitConversionTable {
@@ -537,12 +537,12 @@ func main() {
 	}
 
 	recipeSources := RecipeSourceMap{}
-	recipeSources.ImportFromCSV(args[0])
+	recipeSources.ImportFromCSVFile(args[0])
 
 	recipes := make(RecipeTable, len(recipeSources))
 	productSet := StringSet{}
 	for _, filename := range args[1:] {
-		recipes.ImportFromCSV(filename, productSet)
+		recipes.ImportFromCSVFile(filename, productSet)
 	}
 	products := productSet.Sorted()
 
