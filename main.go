@@ -76,6 +76,8 @@ const iniDefaultSectionName = "DEFAULT"
 const fieldNotApplicableStr = "-"
 const toTasteUnitName = "to taste"
 
+var unitDescriptionPattern = regexp.MustCompile(`(.+?)\s*\((\d+)\s*(.+)\)`)
+
 func (s StringSet) Sorted() (sorted []string) {
 	sorted = make([]string, 0, len(s))
 	for element := range s {
@@ -116,7 +118,6 @@ func (ctx *UnitConversionContext) ImportFromCSVFile(filename string, productDens
 	unitCount := len(unitDescriptions)
 	units := make([]string, 0, unitCount)
 
-	unitDescriptionPattern := regexp.MustCompile(`(.+?)\s*\((\d+)\s*(.+)\)`)
 	for _, unitDescription := range unitDescriptions {
 		unitDescriptionMatch := unitDescriptionPattern.FindStringSubmatch(unitDescription)
 		if len(unitDescriptionMatch) != 4 {
