@@ -88,6 +88,15 @@ func (s StringSet) Sorted() (sorted []string) {
 	return
 }
 
+func NewMeasurement(str string) (m *Measurement) {
+	m = &Measurement{}
+	_, err := fmt.Sscanln(str, &m.Quantity, &m.Unit)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return
+}
+
 func NewUnitConversionContext() *UnitConversionContext {
 	return &UnitConversionContext{
 		UnitConversionTable{},
@@ -211,15 +220,6 @@ func (ctx *UnitConversionContext) ImportFromCSVFile(filename string, productDens
 	}
 }
 
-func getMeasurement(str string) (m *Measurement) {
-	m = &Measurement{}
-	_, err := fmt.Sscanln(str, &m.Quantity, &m.Unit)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return
-}
-
 func (ctx *UnitConversionContext) ImportFromINIFile(filename string, productUnitsMap map[string]StringSet) {
 	file, err := ini.Load(filename)
 	if err != nil {
@@ -231,7 +231,7 @@ func (ctx *UnitConversionContext) ImportFromINIFile(filename string, productUnit
 		log.Fatal(err)
 	}
 	for _, baseUnitDefinition := range baseUnitDefinitions.Keys() {
-		ctx.BaseUnitConversionMap[baseUnitDefinition.Name()] = getMeasurement(baseUnitDefinition.Value())
+		ctx.BaseUnitConversionMap[baseUnitDefinition.Name()] = NewMeasurement(baseUnitDefinition.Value())
 	}
 
 	unitSections := file.Sections()
@@ -242,7 +242,7 @@ func (ctx *UnitConversionContext) ImportFromINIFile(filename string, productUnit
 
 		for _, key := range keys {
 			product := key.Name()
-			measurement := getMeasurement(key.Value())
+			measurement := NewMeasurement(key.Value())
 			unitDefinition[product] = measurement
 
 			unitSet, ok := productUnitsMap[product]
