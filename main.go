@@ -331,15 +331,15 @@ func (m RecipeSourceMap) ImportFromCSVFile(filename string) {
 }
 
 func (p *Product) ConvertUnit(unitConversionContext *UnitConversionContext, unitAliasContext *UnitAliasContext, productAliasMap BaseAliasMap) {
+	var unitAlias string
 	unitAliasDefinition, ok := unitAliasContext.AliasTable[p.Measurement.Unit]
 	if ok {
-		unitAlias, ok := unitAliasDefinition[p.Name]
-		if !ok {
-			unitAlias, ok = unitAliasContext.BaseAliasMap[p.Measurement.Unit]
-		}
-		if ok {
-			p.Measurement.Unit = unitAlias
-		}
+		unitAlias, ok = unitAliasDefinition[p.Name]
+	} else {
+		unitAlias, ok = unitAliasContext.BaseAliasMap[p.Measurement.Unit]
+	}
+	if ok {
+		p.Measurement.Unit = unitAlias
 	}
 	productAlias, ok := productAliasMap[p.Name]
 	if ok {
