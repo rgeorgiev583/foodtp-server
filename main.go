@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -109,12 +110,14 @@ func (ctx *UnitConversionContext) ImportFromCSVFile(filename string, productDens
 	defer file.Close()
 
 	csvReader := csv.NewReader(file)
-	productRecords, err := csvReader.ReadAll()
+	csvReader.ReuseRecord = true
+
+	unitRecord, err := csvReader.Read()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	unitDescriptions := productRecords[0][1:]
+	unitDescriptions := unitRecord[1:]
 	unitCount := len(unitDescriptions)
 	units := make([]string, 0, unitCount)
 
@@ -145,12 +148,20 @@ func (ctx *UnitConversionContext) ImportFromCSVFile(filename string, productDens
 		}
 	}
 
-	for _, productRecord := range productRecords[1:] {
+	for {
+		productRecord, err := csvReader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		product := productRecord[0]
 
 		productUnitSet, ok := productUnitsMap[product]
 		if !ok {
-			productUnitSet = make(StringSet, len(productRecords[1:]))
+			productUnitSet = make(StringSet)
 			productUnitsMap[product] = productUnitSet
 		}
 
@@ -302,12 +313,17 @@ func (m RecipeSourceMap) ImportFromCSVFile(filename string) {
 	}
 
 	csvReader := csv.NewReader(bufferedReader)
-	recipeRecords, err := csvReader.ReadAll()
-	if err != nil {
-		log.Fatal(err)
-	}
+	csvReader.ReuseRecord = true
 
-	for _, recipeRecord := range recipeRecords {
+	for {
+		recipeRecord, err := csvReader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		recipeName := recipeRecord[0]
 		recipeSource := recipeRecord[4]
 		m[recipeName] = recipeSource
@@ -356,12 +372,17 @@ func (t RecipeTable) ImportFromCSVFile(filename string, products StringSet) {
 	}
 
 	csvReader := csv.NewReader(bufferedReader)
-	ingredientRecords, err := csvReader.ReadAll()
-	if err != nil {
-		log.Fatal(err)
-	}
+	csvReader.ReuseRecord = true
 
-	for _, ingredientRecord := range ingredientRecords {
+	for {
+		ingredientRecord, err := csvReader.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		recipeName := ingredientRecord[3]
 		recipe, ok := t[recipeName]
 		if !ok {
