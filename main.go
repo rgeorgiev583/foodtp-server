@@ -18,7 +18,7 @@ import (
 
 	"gopkg.in/ini.v1"
 
-	set "github.com/deckarep/golang-set"
+	mapset "github.com/deckarep/golang-set"
 )
 
 type StringSet map[string]struct{}
@@ -411,8 +411,8 @@ func (t RecipeTable) ImportFromCSVFile(filename string, products StringSet) {
 	return
 }
 
-func (t RecipeTable) GetMatchingRecipeNameSets(availableProducts ProductMap, recipeNamePowerSet set.Set, productDensityMap ProductDensityMap, numberOfServings int) (matchingRecipeNameSets [][]string) {
-	matchingRecipeNameSetsWithSubsets := []set.Set{}
+func (t RecipeTable) GetMatchingRecipeNameSets(availableProducts ProductMap, recipeNamePowerSet mapset.Set, productDensityMap ProductDensityMap, numberOfServings int) (matchingRecipeNameSets [][]string) {
+	matchingRecipeNameSetsWithSubsets := []mapset.Set{}
 
 	for recipeNameSubsetInterface := range recipeNamePowerSet.Iter() {
 		func() {
@@ -421,7 +421,7 @@ func (t RecipeTable) GetMatchingRecipeNameSets(availableProducts ProductMap, rec
 				productCopy := *product
 				remainingProducts[productName] = &productCopy
 			}
-			recipeNameSubset := recipeNameSubsetInterface.(set.Set)
+			recipeNameSubset := recipeNameSubsetInterface.(mapset.Set)
 			for recipeNameInterface := range recipeNameSubset.Iter() {
 				recipeName := recipeNameInterface.(string)
 				recipe, _ := t[recipeName]
@@ -578,7 +578,7 @@ func main() {
 		}
 	}
 
-	recipeNameSet := set.NewThreadUnsafeSet()
+	recipeNameSet := mapset.NewThreadUnsafeSet()
 	for recipeName := range recipes {
 		recipeNameSet.Add(recipeName)
 	}
