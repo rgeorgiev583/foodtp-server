@@ -18,7 +18,7 @@ import (
 
 	"gopkg.in/ini.v1"
 
-	mapset "github.com/deckarep/golang-set"
+	mapset "gopkg.in/deckarep/golang-set.v1"
 )
 
 type StringSet map[string]struct{}
