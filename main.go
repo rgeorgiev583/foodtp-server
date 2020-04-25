@@ -419,6 +419,8 @@ func (t RecipeTable) GetMatchingRecipeNameSets(availableProducts ProductMap, rec
 			remainingProducts := make(ProductMap, len(availableProducts))
 			for productName, product := range availableProducts {
 				productCopy := *product
+				productMeasurementCopy := *product.Measurement
+				productCopy.Measurement = &productMeasurementCopy
 				remainingProducts[productName] = &productCopy
 			}
 			recipeNameSubset := recipeNameSubsetInterface.(mapset.Set)
