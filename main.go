@@ -585,12 +585,12 @@ func main() {
 
 	recipeNamePowerSet := recipeNameSet.PowerSet()
 
-	http.HandleFunc("/products", func(w http.ResponseWriter, r *http.Request) {
-		productsJSON, err := json.Marshal(products)
-		if err != nil {
-			log.Fatal(err)
-		}
+	productsJSON, err := json.Marshal(products)
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	http.HandleFunc("/products", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		if httpOrigin != "" {
 			w.Header().Add("Access-Control-Allow-Origin", httpOrigin)
