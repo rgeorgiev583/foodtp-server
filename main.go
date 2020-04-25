@@ -237,6 +237,10 @@ func (ctx *UnitConversionContext) ImportFromINIFile(filename string, productUnit
 	unitSections := file.Sections()
 	for _, unitSection := range unitSections {
 		unit := unitSection.Name()
+		if unit == iniDefaultSectionName {
+			continue
+		}
+
 		keys := unitSection.Keys()
 		unitDefinition := make(BaseUnitConversionMap, len(keys))
 
@@ -273,6 +277,11 @@ func (ctx *UnitAliasContext) ImportFromINIFile(filename string) {
 	}
 
 	for _, unitSection := range file.Sections() {
+		unit := unitSection.Name()
+		if unit == iniDefaultSectionName {
+			continue
+		}
+
 		aliasDefinitions := unitSection.Keys()
 		aliasMap := make(BaseAliasMap, len(aliasDefinitions))
 
@@ -280,7 +289,7 @@ func (ctx *UnitAliasContext) ImportFromINIFile(filename string) {
 			aliasMap[aliasDefinition.Name()] = aliasDefinition.Value()
 		}
 
-		ctx.AliasTable[unitSection.Name()] = aliasMap
+		ctx.AliasTable[unit] = aliasMap
 	}
 }
 
